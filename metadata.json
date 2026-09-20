@@ -1,0 +1,6 @@
+{
+  "name": "Style And Class – Pre-Loved & Second-Hand UK Fashion",
+  "description": "Curated pre-loved and second-hand fashion shop offering sustainable, affordable luxury clothing for women, men, kids and accessories with UK delivery, PayPal checkout and WhatsApp ordering.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

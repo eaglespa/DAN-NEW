@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f7d488"/>
+      <stop offset="50%" stop-color="#d4a853"/>
+      <stop offset="100%" stop-color="#9a7126"/>
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#181a20"/>
+      <stop offset="100%" stop-color="#0a0a0d"/>
+    </linearGradient>
+    <filter id="subtleGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#d4a853" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Background Shield / Rounded Rectangle -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)"/>
+  <rect width="480" height="480" x="16" y="16" rx="112" fill="none" stroke="url(#goldGrad)" stroke-width="4" stroke-opacity="0.4"/>
+
+  <!-- Luxury Monogram Typography -->
+  <g filter="url(#subtleGlow)">
+    <text x="50%" y="54%" text-anchor="middle" dominant-baseline="central"
+          font-family="'Playfair Display', Georgia, 'Times New Roman', serif"
+          font-size="220" font-weight="700" letter-spacing="4"
+          fill="url(#goldGrad)">S&amp;C</text>
+  </g>
+
+  <!-- Elegant Diamond Accent -->
+  <polygon points="256,76 264,88 256,100 248,88" fill="url(#goldGrad)"/>
+  <polygon points="256,412 264,424 256,436 248,424" fill="url(#goldGrad)"/>
+</svg>

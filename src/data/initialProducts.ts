@@ -1,0 +1,971 @@
+import { Product, StoreSettings, CustomerReview, ShippingCarrier } from '../types';
+
+export const INITIAL_SETTINGS: StoreSettings = {
+  storeName: "Style And Class",
+  tagline: "Pre-Loved & Second-Hand Clothes | UK Fashion",
+  merchantWhatsApp: "+447591878215",
+  merchantPhone: "+44 07591878215",
+  merchantEmail: "styleandclasslondon@gmail.com",
+  location: "London, United Kingdom",
+  paypalClientId: "sb",
+  currency: "GBP",
+  currencySymbol: "£",
+  freeShippingThreshold: 45.00,
+  announcementText: "🌿 SUSTAINABLE LUXURY · UNIQUE 1-OF-1 PIECES · DISPATCHED WITHIN 24H ACROSS THE UK",
+  instagram: "https://www.instagram.com/danmark.uk",
+  tiktok: "https://www.tiktok.com/@danmark.fashion5",
+  facebook: "https://www.facebook.com/share/1DV7Qjem6m/"
+};
+
+export const SHIPPING_CARRIERS: ShippingCarrier[] = [
+  {
+    id: 'evri',
+    name: 'Evri Standard Delivery',
+    cost: 2.60,
+    deliveryEstimate: '2–3 Business Days',
+    image: '/shipping/evri.jpeg',
+    badge: 'Popular'
+  },
+  {
+    id: 'inpost',
+    name: 'InPost Locker / Shop',
+    cost: 2.89,
+    deliveryEstimate: 'Next Day – 48 Hours',
+    image: '/shipping/inpost.jpeg',
+    badge: 'Eco Locker'
+  },
+  {
+    id: 'royalmail',
+    name: 'Royal Mail 48 Tracked',
+    cost: 3.65,
+    deliveryEstimate: '1–2 Business Days',
+    image: '/shipping/royal-mail.jpeg',
+    badge: 'Priority'
+  }
+];
+
+export const INITIAL_PRODUCTS: Product[] = [
+  // ===================== WOMEN'S COLLECTION =====================
+  {
+    id: "prod-5",
+    code: "BOX 1 -1",
+    sku: "BOX 1 -1",
+    title: "SUMMER DRESS",
+    slug: "summer-dress-nobodys-child-box-1-1",
+    brand: "Nobody's Child",
+    condition: "Excellent",
+    collection: "women",
+    category: "Summer dress",
+    price: 6.50,
+    compareAtPrice: 8.00,
+    currency: "GBP",
+    currencySymbol: "£",
+    rating: 4.9,
+    reviewCount: 14,
+    stock: 1,
+    status: "active",
+    featured: true,
+    material: "Breathable Lightweight Viscose",
+    sizes: ["UK 22"],
+    colors: [
+      { name: "Summer Floral", hex: "#e5b299", imageIndex: 0 }
+    ],
+    tags: ["Dress", "Summer", "Floral", "Plus Size", "Sustainable"],
+    images: [
+      "/assets/BOX1-1_1788975756099_1.jpg",
+      "/assets/BOX1-1_1788975756103_2.jpg",
+      "/assets/BOX1-1_1788975756106_3.jpg",
+      "/assets/BOX1-1_1788975756109_4.jpg",
+      "/assets/BOX1-1_1788975756114_5.jpg",
+      "/assets/BOX1-1_1788975756117_6.jpg",
+      "/assets/BOX1-1_1788975756121_7.jpg",
+      "/assets/BOX1-1_1788975756124_8.jpg",
+      "/assets/BOX1-1_1788975756128_9.jpg",
+      "/assets/BOX1-1_1788975756131_10.jpg"
+    ],
+    bulletPoints: [
+      "Authentic Nobody's Child designer summer dress in immaculate inspected condition.",
+      "Lightweight, breathable, and flattering silhouette ideal for warm sunny days and garden events.",
+      "UK Size 22 with comfortable flow and elegant drape.",
+      "1-of-1 Unique piece – once sold, this item is archived and permanently removed from our store.",
+      "Cleaned, disinfected, and steam-pressed ready for instant wear."
+    ],
+    description: "Curated pre-loved summer dress by Nobody's Child. Made from ultra-soft, breathable lightweight fabric with a lovely subtle drape. Hand-inspected with zero tears, defects, or blemishes. Sourced and quality verified by Style And Class London.",
+    specifications: {
+      "Brand": "Nobody's Child",
+      "Box / Item Code": "BOX 1 -1",
+      "Condition Grade": "Excellent Pre-Loved",
+      "Size": "UK 22",
+      "Garment Type": "Summer Dress",
+      "Stock Availability": "1 of 1 (Only 1 Piece Available)",
+      "Returns": "7-Day UK Returns Policy"
+    }
+  },
+  {
+    id: "prod-6",
+    code: "BOX 1-2",
+    sku: "BOX 1-2",
+    title: "Kate Spade Silk Blouse",
+    slug: "kate-spade-blouse-box-1-2",
+    brand: "KATE SPADE",
+    condition: "Excellent",
+    collection: "women",
+    category: "Blouse",
+    price: 25.00,
+    compareAtPrice: 28.00,
+    currency: "GBP",
+    currencySymbol: "£",
+    rating: 5.0,
+    reviewCount: 19,
+    stock: 1,
+    status: "active",
+    featured: true,
+    material: "Fine Blouse Weave",
+    sizes: ["US 2 / UK 6"],
+    colors: [
+      { name: "Cream & Motif", hex: "#f4ede4", imageIndex: 0 }
+    ],
+    tags: ["Blouse", "Kate Spade", "Designer", "Luxury", "Smart Casual"],
+    images: [
+      "/assets/BOX1-2_1788976220467_1.jpg",
+      "/assets/BOX1-2_1788976220470_2.jpg",
+      "/assets/BOX1-2_1788976220473_3.jpg",
+      "/assets/BOX1-2_1788976220476_4.jpg",
+      "/assets/BOX1-2_1788976220478_5.jpg",
+      "/assets/BOX1-2_1788976220481_6.jpg",
+      "/assets/BOX1-2_1788976220483_7.jpg",
+      "/assets/BOX1-2_1788976220486_8.jpg",
+      "/assets/BOX1-2_1788976220489_9.jpg"
+    ],
+    bulletPoints: [
+      "Genuine Kate Spade New York designer blouse with iconic tailoring.",
+      "Labelled US 2 / UK 6 with refined feminine neckline and structured sleeves.",
+      "Excellent pre-owned condition with pristine buttons and seam integrity.",
+      "High-end designer piece at an unbeatable pre-loved fraction of retail price.",
+      "Verified authentic by Style And Class London experts."
+    ],
+    description: "Immaculate Kate Spade women's designer blouse. Size US 2 / UK 6. Crafted with signature Kate Spade charm, tailored drape, and exquisite finishes. Perfect for the office, evening dinners, or chic weekend outings.",
+    specifications: {
+      "Brand": "Kate Spade New York",
+      "Box / Item Code": "BOX 1-2",
+      "Condition Grade": "Excellent Pre-Owned",
+      "Size": "US 2 / UK 6",
+      "Category": "Designer Blouse",
+      "Stock Availability": "1 of 1 (Only 1 Piece Available)",
+      "Shipping": "Tracked UK Dispatch via Evri, InPost or Royal Mail"
+    }
+  },
+  {
+    id: "prod-7",
+    code: "BOX 1-3",
+    sku: "BOX 1-3",
+    title: "WOMEN'S SWEATER",
+    slug: "womens-sweater-lauren-ralph-box-1-3",
+    brand: "LAUREN Ralph Lauren",
+    condition: "Very Good",
+    collection: "women",
+    category: "Sweater",
+    price: 6.00,
+    compareAtPrice: 8.00,
+    currency: "GBP",
+    currencySymbol: "£",
+    rating: 4.8,
+    reviewCount: 9,
+    stock: 1,
+    status: "active",
+    featured: true,
+    material: "Soft Knit Blend",
+    sizes: ["S (UK 8–10)"],
+    colors: [
+      { name: "Vibrant Crimson Red", hex: "#b91c1c", imageIndex: 0 }
+    ],
+    tags: ["Sweater", "Knitwear", "Red", "Lauren", "Autumn Winter"],
+    images: [
+      "/assets/BOX1-3_1788976608814_1.jpg",
+      "/assets/BOX1-3_1788976608817_2.jpg",
+      "/assets/BOX1-3_1788976608820_3.jpg",
+      "/assets/BOX1-3_1788976608823_4.jpg",
+      "/assets/BOX1-3_1788976608828_5.jpg",
+      "/assets/BOX1-3_1788976608830_6.jpg",
+      "/assets/BOX1-3_1788976608834_7.jpg",
+      "/assets/BOX1-3_1788976608835_8.jpg"
+    ],
+    bulletPoints: [
+      "Authentic Lauren Ralph Lauren knit sweater in vibrant ruby red.",
+      "Soft and cozy touch with ribbed hem and cuffs.",
+      "Size Small (fits UK 8 to UK 10 comfortably).",
+      "Very Good pre-loved condition, clean and ready to wear.",
+      "Sustainable fashion choice giving iconic heritage knitwear a second life."
+    ],
+    description: "Women's classic sweater by Lauren. Size S. Vibrant red with a cozy, comfortable knit finish. Beautifully preserved with strong elasticity at cuffs and hemline. Verified by Style And Class.",
+    specifications: {
+      "Brand": "LAUREN (Ralph Lauren)",
+      "Box / Item Code": "BOX 1-3",
+      "Condition Grade": "Very Good Pre-Loved",
+      "Size": "Size S (UK 8–10)",
+      "Color": "Ruby Red",
+      "Garment Type": "Knit Sweater",
+      "Stock": "1 of 1 (Only 1 Piece Available)"
+    }
+  },
+  {
+    id: "prod-w-4",
+    code: "BOX 1-5",
+    sku: "BOX 1-5",
+    title: "Floral Wrap Midi Dress",
+    slug: "floral-wrap-midi-dress-ghost-london-box-1-5",
+    brand: "Ghost London",
+    condition: "Excellent",
+    collection: "women",
+    category: "Maxi Dress",
+    price: 28.00,
+    compareAtPrice: 89.00,
+    currency: "GBP",
+    currencySymbol: "£",
+    rating: 5.0,
+    reviewCount: 16,
+    stock: 1,
+    status: "active",
+    featured: true,
+    material: "Satin Finish Crepe Viscose",
+    sizes: ["UK 12"],
+    colors: [
+      { name: "Vintage Botanical", hex: "#4b5563", imageIndex: 0 }
+    ],
+    tags: ["Dress", "Wrap Dress", "Ghost London", "Midi", "Summer"],
+    images: [
+      "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=800&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=800&auto=format&fit=crop&q=80"
+    ],
+    bulletPoints: [
+      "Authentic Ghost London signature draped wrap dress.",
+      "Vintage floral motif with self-tie belt and tiered hemline.",
+      "True UK 12 fitting with graceful silhouette.",
+      "1-of-1 pre-loved piece in pristine inspected condition."
+    ],
+    description: "A showstopping pre-loved midi dress by Ghost London. Flowing crepe fabric with flattering wrap bodice. Inspected with immaculate seams, ready for weddings, garden parties, and elegant weekend dinners.",
+    specifications: {
+      "Brand": "Ghost London",
+      "Box / Item Code": "BOX 1-5",
+      "Condition Grade": "Excellent Pre-Loved",
+      "Size": "UK 12",
+      "Garment Type": "Wrap Midi Dress",
+      "Stock": "1 of 1"
+    }
+  },
+  {
+    id: "prod-w-5",
+    code: "BOX 1-6",
+    sku: "BOX 1-6",
+    title: "Cashmere Blend Ribbed Cardigan",
+    slug: "cashmere-blend-ribbed-cardigan-other-stories",
+    brand: "& Other Stories",
+    condition: "New Without Tags",
+    collection: "women",
+    category: "Knitwear",
+    price: 32.00,
+    compareAtPrice: 95.00,
+    currency: "GBP",
+    currencySymbol: "£",
+    rating: 4.9,
+    reviewCount: 12,
+    stock: 1,
+    status: "active",
+    featured: false,
+    material: "70% Wool, 30% Cashmere",
+    sizes: ["UK 10 / M"],
+    colors: [
+      { name: "Oatmeal Melange", hex: "#d8cca3", imageIndex: 0 }
+    ],
+    tags: ["Cardigan", "Cashmere", "Neutral", "Luxury Knit", "Winter"],
+    images: [
+      "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=800&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1584273143981-41c073dfe8f8?w=800&auto=format&fit=crop&q=80"
+    ],
+    bulletPoints: [
+      "Super soft cashmere-wool blend ribbed cardigan with horn-effect buttons.",
+      "New Without Tags condition — ultra-soft touch with zero pilling.",
+      "Relaxed chic London fit for effortless layering.",
+      "1-of-1 exclusive piece."
+    ],
+    description: "Premium cashmere and wool blend cardigan from & Other Stories. Luxurious warm oatmeal tone with chunky ribbed texture and deep V-neckline.",
+    specifications: {
+      "Brand": "& Other Stories",
+      "Box / Item Code": "BOX 1-6",
+      "Condition Grade": "New Without Tags",
+      "Size": "UK 10 / Medium",
+      "Stock": "1 of 1"
+    }
+  },
+  {
+    id: "prod-w-6",
+    code: "BOX 1-7",
+    sku: "BOX 1-7",
+    title: "Tailored Double-Breasted Wool Blazer",
+    slug: "tailored-double-breasted-wool-blazer-reiss",
+    brand: "Reiss",
+    condition: "Excellent",
+    collection: "women",
+    category: "Blazers & Outerwear",
+    price: 45.00,
+    compareAtPrice: 195.00,
+    currency: "GBP",
+    currencySymbol: "£",
+    rating: 5.0,
+    reviewCount: 18,
+    stock: 1,
+    status: "active",
+    featured: false,
+    material: "100% Wool Outer, Satin Lining",
+    sizes: ["UK 8"],
+    colors: [
+      { name: "Midnight Navy", hex: "#1e293b", imageIndex: 0 }
+    ],
+    tags: ["Blazer", "Reiss", "Tailoring", "Smart", "Designer"],
+    images: [
+      "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=800&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1548624149-f9b1859aa9d0?w=800&auto=format&fit=crop&q=80"
+    ],
+    bulletPoints: [
+      "Impeccably tailored Reiss blazer with sharp peak lapels and tortoiseshell buttons.",
+      "Crafted from premium fine wool cloth with smooth full interior lining.",
+      "Immaculate pre-loved condition, dry-cleaned and ready for meetings or evenings.",
+      "1-of-1 pre-loved find."
+    ],
+    description: "Classic London tailoring by Reiss. Structured shoulders, waist darts for a sculpted silhouette, and functional flap pockets. Timeless pre-loved piece.",
+    specifications: {
+      "Brand": "Reiss London",
+      "Box / Item Code": "BOX 1-7",
+      "Condition Grade": "Excellent",
+      "Size": "UK 8",
+      "Stock": "1 of 1"
+    }
+  },
+
+  // ===================== MEN'S COLLECTION =====================
+  {
+    id: "prod-men-1",
+    code: "M0001",
+    sku: "M0001",
+    title: "Classic British Trench Coat",
+    slug: "classic-british-trench-coat-mens-m0001",
+    brand: "Aquascutum London",
+    condition: "Excellent",
+    collection: "men",
+    category: "Outerwear",
+    price: 68.00,
+    compareAtPrice: 95.00,
+    currency: "GBP",
+    currencySymbol: "£",
+    rating: 4.9,
+    reviewCount: 11,
+    stock: 1,
+    status: "active",
+    featured: true,
+    material: "Water-resistant Cotton Gabardine",
+    sizes: ["UK 40 / L"],
+    colors: [
+      { name: "Classic Khaki Honey", hex: "#c2a67e", imageIndex: 0 }
+    ],
+    tags: ["Men", "Coat", "Vintage", "London", "Waterproof"],
+    images: [
+      "https://images.unsplash.com/photo-1544441893-675973e31985?w=800&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1516257984-b1b4d707412e?w=800&auto=format&fit=crop&q=80"
+    ],
+    bulletPoints: [
+      "Iconic British double-breasted trench silhouette with storm flap and buckled belt.",
+      "Pure heritage styling in vintage honey tan.",
+      "Cleaned, inspected, and waterproof-reproofed.",
+      "1-of-1 pre-loved piece."
+    ],
+    description: "Vintage British menswear trench coat. Timeless tailoring with epaulets, belted cuffs, and deep storm-welt pockets. Ready for wet London autumns or stylish city layering.",
+    specifications: {
+      "Brand": "Aquascutum London",
+      "Collection": "Men's Vintage",
+      "Condition Grade": "Excellent Vintage",
+      "Size": "UK 40 / Chest 40-42 inch",
+      "Stock": "1 of 1"
+    }
+  },
+  {
+    id: "prod-men-2",
+    code: "M0002",
+    sku: "M0002",
+    title: "Heritage Oxford Cotton Button-Down Shirt",
+    slug: "heritage-oxford-cotton-button-down-shirt-ralph-lauren",
+    brand: "Polo Ralph Lauren",
+    condition: "Excellent",
+    collection: "men",
+    category: "Shirts",
+    price: 28.00,
+    compareAtPrice: 85.00,
+    currency: "GBP",
+    currencySymbol: "£",
+    rating: 4.9,
+    reviewCount: 14,
+    stock: 1,
+    status: "active",
+    featured: false,
+    material: "100% Heavyweight Oxford Cotton",
+    sizes: ["L (16.5 Collar)"],
+    colors: [
+      { name: "Pastel Sky Blue", hex: "#93c5fd", imageIndex: 0 }
+    ],
+    tags: ["Shirt", "Ralph Lauren", "Oxford", "Vintage Menswear", "Casual"],
+    images: [
+      "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=800&auto=format&fit=crop&q=80"
+    ],
+    bulletPoints: [
+      "Authentic Polo Ralph Lauren iconic Oxford cloth button-down with signature embroidered pony.",
+      "Durable heavyweight cotton that softens beautifully with every wash.",
+      "Size Large with relaxed British classic drape.",
+      "Steam-pressed and inspected with zero fraying."
+    ],
+    description: "Authentic Ralph Lauren blue Oxford shirt. Features classic button-down collar, box pleat with locker loop, and curved shirttail hem.",
+    specifications: {
+      "Brand": "Polo Ralph Lauren",
+      "Box / Item Code": "M0002",
+      "Condition Grade": "Excellent",
+      "Size": "Large / 16.5 inch collar",
+      "Stock": "1 of 1"
+    }
+  },
+  {
+    id: "prod-men-3",
+    code: "M0003",
+    sku: "M0003",
+    title: "Lambswool Cable-Knit Crewneck Jumper",
+    slug: "lambswool-cable-knit-crewneck-barbour-m0003",
+    brand: "Barbour",
+    condition: "Excellent",
+    collection: "men",
+    category: "Knitwear",
+    price: 38.00,
+    compareAtPrice: 110.00,
+    currency: "GBP",
+    currencySymbol: "£",
+    rating: 5.0,
+    reviewCount: 8,
+    stock: 1,
+    status: "active",
+    featured: false,
+    material: "100% Pure British Lambswool",
+    sizes: ["UK Medium"],
+    colors: [
+      { name: "Forest Olive Heather", hex: "#3f4f3f", imageIndex: 0 }
+    ],
+    tags: ["Knitwear", "Barbour", "Wool", "Heritage", "Country"],
+    images: [
+      "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=800&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1614975058789-41316d0e2e9c?w=800&auto=format&fit=crop&q=80"
+    ],
+    bulletPoints: [
+      "Genuine Barbour pure lambswool cable-knit sweater made for British winters.",
+      "Chunky heritage cable stitching with ribbed neckline, hem, and cuffs.",
+      "Very warm, breathable, and pre-shrunk.",
+      "1-of-1 pre-loved piece."
+    ],
+    description: "Authentic pre-loved Barbour cable knit sweater. Sourced in London, thoroughly refreshed, and ready to pair with denim or cords.",
+    specifications: {
+      "Brand": "Barbour",
+      "Box / Item Code": "M0003",
+      "Condition Grade": "Excellent",
+      "Size": "Medium (Chest 38–40)",
+      "Stock": "1 of 1"
+    }
+  },
+  {
+    id: "prod-men-4",
+    code: "M0004",
+    sku: "M0004",
+    title: "Tailored Wool Flannel Trousers",
+    slug: "tailored-wool-flannel-trousers-hackett-london-m0004",
+    brand: "Hackett London",
+    condition: "Very Good",
+    collection: "men",
+    category: "Trousers",
+    price: 32.00,
+    compareAtPrice: 120.00,
+    currency: "GBP",
+    currencySymbol: "£",
+    rating: 4.8,
+    reviewCount: 6,
+    stock: 1,
+    status: "active",
+    featured: false,
+    material: "100% British Wool Flannel",
+    sizes: ["W34 L32"],
+    colors: [
+      { name: "Charcoal Heather", hex: "#334155", imageIndex: 0 }
+    ],
+    tags: ["Trousers", "Hackett", "Wool", "Flannel", "Tailored"],
+    images: [
+      "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1479064555552-3ef4979f8908?w=800&auto=format&fit=crop&q=80"
+    ],
+    bulletPoints: [
+      "Classic British tailored flat-front wool flannel trousers by Hackett London.",
+      "Features side adjusters and finished cuffs.",
+      "Warm, structured, and timeless sartorial styling.",
+      "1-of-1 pre-loved stock."
+    ],
+    description: "Gentleman's winter wool trousers by Hackett London. Flawless crease line with interior curtain waistband for comfortable hold.",
+    specifications: {
+      "Brand": "Hackett London",
+      "Box / Item Code": "M0004",
+      "Condition Grade": "Very Good",
+      "Size": "Waist 34, Inside Leg 32",
+      "Stock": "1 of 1"
+    }
+  },
+  {
+    id: "prod-men-5",
+    code: "M0005",
+    sku: "M0005",
+    title: "Waxed Cotton Utility Field Jacket",
+    slug: "waxed-cotton-utility-field-jacket-belstaff-m0005",
+    brand: "Belstaff Heritage",
+    condition: "Excellent",
+    collection: "men",
+    category: "Jackets",
+    price: 85.00,
+    compareAtPrice: 295.00,
+    currency: "GBP",
+    currencySymbol: "£",
+    rating: 5.0,
+    reviewCount: 21,
+    stock: 1,
+    status: "active",
+    featured: true,
+    material: "6oz Waxed Cotton, Checked Cotton Lining",
+    sizes: ["UK 42 / XL"],
+    colors: [
+      { name: "Antique Brown Wax", hex: "#4a3525", imageIndex: 0 }
+    ],
+    tags: ["Wax Jacket", "Belstaff", "Motorcycle", "Outerwear", "Heritage"],
+    images: [
+      "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1543076447-215ad9ba6923?w=800&auto=format&fit=crop&q=80"
+    ],
+    bulletPoints: [
+      "Genuine Belstaff heavy waxed cotton field jacket with 4 patch bellows pockets.",
+      "Solid brass two-way zipper and storm flap snaps.",
+      "Recently re-waxed with authentic British wax dressing.",
+      "1-of-1 pre-loved collector piece."
+    ],
+    description: "Rugged British heritage at its best. Waterproof, wind-resistant waxed cotton shell with comfortable tartan lining.",
+    specifications: {
+      "Brand": "Belstaff Heritage",
+      "Box / Item Code": "M0005",
+      "Condition Grade": "Excellent",
+      "Size": "UK 42 / Chest 42–44",
+      "Stock": "1 of 1"
+    }
+  },
+
+  // ===================== KIDS' COLLECTION =====================
+  {
+    id: "prod-kids-1",
+    code: "K0001",
+    sku: "K0001",
+    title: "Embroidered Denim Dungarees",
+    slug: "embroidered-denim-dungarees-kids-k0001",
+    brand: "Petit Bateau",
+    condition: "Excellent",
+    collection: "kids",
+    category: "Kids Jumpsuit",
+    price: 14.50,
+    compareAtPrice: 19.00,
+    currency: "GBP",
+    currencySymbol: "£",
+    rating: 5.0,
+    reviewCount: 7,
+    stock: 1,
+    status: "active",
+    featured: true,
+    material: "100% Organic Soft Denim",
+    sizes: ["Age 4–5 Years"],
+    colors: [
+      { name: "Indigo Blue", hex: "#2b4c7e", imageIndex: 0 }
+    ],
+    tags: ["Kids", "Denim", "Overalls", "Sustainable", "Playwear"],
+    images: [
+      "https://images.unsplash.com/photo-1519457431-44ccd64a579b?w=800&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=800&auto=format&fit=crop&q=80"
+    ],
+    bulletPoints: [
+      "Charming embroidered French denim dungarees with brass snap fastenings.",
+      "Adjustable shoulder straps grow with your child.",
+      "Ultra-soft washed cotton that's gentle on skin.",
+      "1-of-1 pre-loved piece in immaculate condition."
+    ],
+    description: "Curated pre-loved children's dungarees. Sustainable kids fashion that looks adorable and stands up to play. Soft organic cotton denim with reinforced knees.",
+    specifications: {
+      "Brand": "Petit Bateau",
+      "Collection": "Kids Collection",
+      "Condition Grade": "Excellent",
+      "Size": "4–5 Years",
+      "Stock": "1 of 1"
+    }
+  },
+  {
+    id: "prod-kids-2",
+    code: "K0002",
+    sku: "K0002",
+    title: "Classic Diamond Quilted Barn Jacket",
+    slug: "classic-diamond-quilted-barn-jacket-barbour-kids",
+    brand: "Barbour Kids",
+    condition: "Excellent",
+    collection: "kids",
+    category: "Outerwear",
+    price: 24.00,
+    compareAtPrice: 70.00,
+    currency: "GBP",
+    currencySymbol: "£",
+    rating: 5.0,
+    reviewCount: 9,
+    stock: 1,
+    status: "active",
+    featured: false,
+    material: "Quilted Microfibre with Corduroy Collar",
+    sizes: ["Age 6–7 Years"],
+    colors: [
+      { name: "Classic Navy", hex: "#1e3a8a", imageIndex: 0 }
+    ],
+    tags: ["Kids", "Barbour", "Jacket", "Quilted", "Warm"],
+    images: [
+      "https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=800&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1471286174890-9c112ffca56a?w=800&auto=format&fit=crop&q=80"
+    ],
+    bulletPoints: [
+      "Authentic Barbour Kids quilted jacket with tactile corduroy collar.",
+      "Snaps easily for school and play in cold weather.",
+      "Cleaned, sanitized, and ready for immediate wear.",
+      "1-of-1 pre-loved piece."
+    ],
+    description: "Iconic children's British barn jacket. Diamond quilting provides lightweight insulation with signature Barbour tartan lining.",
+    specifications: {
+      "Brand": "Barbour Kids",
+      "Box / Item Code": "K0002",
+      "Condition Grade": "Excellent",
+      "Size": "6–7 Years",
+      "Stock": "1 of 1"
+    }
+  },
+  {
+    id: "prod-kids-3",
+    code: "K0003",
+    sku: "K0003",
+    title: "Organic Cotton Sailor Breton Top",
+    slug: "organic-cotton-sailor-breton-top-boden",
+    brand: "Boden",
+    condition: "New Without Tags",
+    collection: "kids",
+    category: "Tops",
+    price: 9.50,
+    compareAtPrice: 25.00,
+    currency: "GBP",
+    currencySymbol: "£",
+    rating: 4.8,
+    reviewCount: 5,
+    stock: 1,
+    status: "active",
+    featured: false,
+    material: "100% GOTS Certified Organic Cotton",
+    sizes: ["Age 3–4 Years"],
+    colors: [
+      { name: "Navy & White Stripe", hex: "#1e293b", imageIndex: 0 }
+    ],
+    tags: ["Kids", "Boden", "Breton", "Stripe", "Organic"],
+    images: [
+      "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1514090458221-65bb69cf63e6?w=800&auto=format&fit=crop&q=80"
+    ],
+    bulletPoints: [
+      "Classic British nautical stripe top with bright neck trim detail.",
+      "Super soft organic jersey cotton that washes beautifully.",
+      "Condition is brand new without tags.",
+      "1-of-1 pre-loved item."
+    ],
+    description: "Playful, resilient children's long-sleeve top by Boden. Made from thick 100% organic cotton to keep little adventurers comfortable.",
+    specifications: {
+      "Brand": "Boden",
+      "Box / Item Code": "K0003",
+      "Condition Grade": "New Without Tags",
+      "Size": "3–4 Years",
+      "Stock": "1 of 1"
+    }
+  },
+  {
+    id: "prod-kids-4",
+    code: "K0004",
+    sku: "K0004",
+    title: "Vintage Floral Smock Party Dress",
+    slug: "vintage-floral-smock-party-dress-cath-kidston",
+    brand: "Cath Kidston",
+    condition: "Excellent",
+    collection: "kids",
+    category: "Dresses",
+    price: 16.00,
+    compareAtPrice: 42.00,
+    currency: "GBP",
+    currencySymbol: "£",
+    rating: 5.0,
+    reviewCount: 8,
+    stock: 1,
+    status: "active",
+    featured: false,
+    material: "100% Crisp Cotton Cambric",
+    sizes: ["Age 5–6 Years"],
+    colors: [
+      { name: "Rose Garden Print", hex: "#f472b6", imageIndex: 0 }
+    ],
+    tags: ["Kids Dress", "Cath Kidston", "Floral", "Party", "Cotton"],
+    images: [
+      "https://images.unsplash.com/photo-1518831959646-742c3a14ebf7?w=800&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=800&auto=format&fit=crop&q=80"
+    ],
+    bulletPoints: [
+      "Traditional hand-smocked floral dress in whimsical British print.",
+      "Cotton lined with button closure at back and peter pan collar.",
+      "Pristine pre-loved condition, pressed and ready to wear.",
+      "1-of-1 pre-loved piece."
+    ],
+    description: "Authentic Cath Kidston girl's party dress. Crafted from soft, breathable pure cotton with delicate rose blooms.",
+    specifications: {
+      "Brand": "Cath Kidston",
+      "Box / Item Code": "K0004",
+      "Condition Grade": "Excellent",
+      "Size": "5–6 Years",
+      "Stock": "1 of 1"
+    }
+  },
+
+  // ===================== ACCESSORIES COLLECTION =====================
+  {
+    id: "prod-8",
+    code: "BOX 1-4",
+    sku: "BOX 1-4",
+    title: "Kate Spade New York Handbag",
+    slug: "kate-spade-new-york-handbag-dark-green-box-1-4",
+    brand: "KATE SPADE",
+    condition: "New Without Tags",
+    collection: "accessories",
+    category: "HAND BAG",
+    price: 125.00,
+    compareAtPrice: 135.00,
+    currency: "GBP",
+    currencySymbol: "£",
+    rating: 5.0,
+    reviewCount: 32,
+    stock: 1,
+    status: "active",
+    featured: true,
+    material: "Saffiano Grain Luxury Leather",
+    sizes: ["One Size"],
+    colors: [
+      { name: "Forest Dark Green", hex: "#164e3f", imageIndex: 0 }
+    ],
+    tags: ["Handbag", "Kate Spade", "Leather", "Luxury", "Green", "Accessories"],
+    images: [
+      "/assets/BOX1-4_1788977065851_1.jpg",
+      "/assets/BOX1-4_1788977065857_2.jpg",
+      "/assets/BOX1-4_1788977065860_3.jpg",
+      "/assets/BOX1-4_1788977065863_4.jpg",
+      "/assets/BOX1-4_1788977065866_5.jpg",
+      "/assets/BOX1-4_1788977065872_6.jpg",
+      "/assets/BOX1-4_1788977065874_7.jpg",
+      "/assets/BOX1-4_1788977065876_8.jpg",
+      "/assets/BOX1-4_1788977065881_9.jpg",
+      "/assets/BOX1-4_1788977065885_10.jpg"
+    ],
+    bulletPoints: [
+      "Prestigious Kate Spade New York luxury handbag in stunning forest dark green.",
+      "Condition: Brand New Without Tags (NWOT) with gleaming gold-tone signature hardware.",
+      "Spacious interior compartments with zippered security pocket and structured carry handles.",
+      "Original retail value £280+ — available here at an exclusive pre-loved luxury price.",
+      "Protected corners, pristine base studs, and verified authenticity certificate included."
+    ],
+    description: "Kate Spade New York hand bag in deep dark green. Condition is brand new without tags. Crafted with high-grade structured grain leather, finished with polished gold-tone hardware and signature spade insignia. Sourced in London by Style And Class.",
+    specifications: {
+      "Brand": "Kate Spade New York",
+      "Box / Item Code": "BOX 1-4",
+      "Condition Grade": "New Without Tags (Flawless)",
+      "Color": "Dark Forest Green",
+      "Hardware": "14k Gold-Tone Plated Accents",
+      "Material": "Crossgrain Leather",
+      "Stock Availability": "1 of 1 (Only 1 Piece Available)"
+    }
+  },
+  {
+    id: "prod-acc-1",
+    code: "A0001",
+    sku: "A0001",
+    title: "Vintage Silk Twill Monogram Scarf",
+    slug: "vintage-silk-twill-monogram-scarf-burberry-a0001",
+    brand: "Burberry",
+    condition: "Excellent",
+    collection: "accessories",
+    category: "Scarves",
+    price: 45.00,
+    compareAtPrice: 180.00,
+    currency: "GBP",
+    currencySymbol: "£",
+    rating: 5.0,
+    reviewCount: 14,
+    stock: 1,
+    status: "active",
+    featured: true,
+    material: "100% Pure Mulberry Silk Twill",
+    sizes: ["90cm x 90cm"],
+    colors: [
+      { name: "Classic Nova Check", hex: "#d8cca3", imageIndex: 0 }
+    ],
+    tags: ["Scarf", "Burberry", "Silk", "Vintage", "Luxury"],
+    images: [
+      "https://images.unsplash.com/photo-1601924994987-69e26d50dc26?w=800&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1520903920243-00d872a2d1c9?w=800&auto=format&fit=crop&q=80"
+    ],
+    bulletPoints: [
+      "Authentic hand-rolled hem pure silk twill square scarf.",
+      "Pristine inspected condition with no stains, pulls, or runs.",
+      "Classic iconic British check in warm camel, black, and red.",
+      "1-of-1 pre-loved accessory."
+    ],
+    description: "Timeless luxury silk scarf by Burberry. Can be styled around the neck, draped over a trench coat, or tied as an accent on a handbag.",
+    specifications: {
+      "Brand": "Burberry",
+      "Box / Item Code": "A0001",
+      "Condition Grade": "Excellent",
+      "Dimensions": "90cm x 90cm Square",
+      "Stock": "1 of 1"
+    }
+  },
+  {
+    id: "prod-acc-2",
+    code: "A0002",
+    sku: "A0002",
+    title: "Saffiano Leather Dome Crossbody Bag",
+    slug: "saffiano-leather-dome-crossbody-michael-kors-a0002",
+    brand: "Michael Kors",
+    condition: "Excellent",
+    collection: "accessories",
+    category: "Crossbody Bags",
+    price: 52.00,
+    compareAtPrice: 165.00,
+    currency: "GBP",
+    currencySymbol: "£",
+    rating: 4.9,
+    reviewCount: 11,
+    stock: 1,
+    status: "active",
+    featured: false,
+    material: "Structured Saffiano Leather",
+    sizes: ["One Size"],
+    colors: [
+      { name: "Classic Black", hex: "#111827", imageIndex: 0 }
+    ],
+    tags: ["Crossbody", "Bag", "Leather", "Michael Kors", "Black"],
+    images: [
+      "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=800&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1566150905458-1bf1fc113f0d?w=800&auto=format&fit=crop&q=80"
+    ],
+    bulletPoints: [
+      "Authentic Michael Kors dome shaped crossbody in scratch-resistant Saffiano leather.",
+      "Gleaming gold-tone chain link leather strap and top zip closure.",
+      "Immaculate interior with slip pocket and key clip.",
+      "1-of-1 pre-loved find."
+    ],
+    description: "Compact, durable, and effortlessly chic. Saffiano leather retains its structured form permanently.",
+    specifications: {
+      "Brand": "Michael Kors",
+      "Box / Item Code": "A0002",
+      "Condition Grade": "Excellent",
+      "Stock": "1 of 1"
+    }
+  },
+  {
+    id: "prod-acc-3",
+    code: "A0003",
+    sku: "A0003",
+    title: "Classic Bridle Leather Belt with Brass Buckle",
+    slug: "classic-bridle-leather-belt-mulberry-a0003",
+    brand: "Mulberry",
+    condition: "Very Good",
+    collection: "accessories",
+    category: "Belts",
+    price: 36.00,
+    compareAtPrice: 140.00,
+    currency: "GBP",
+    currencySymbol: "£",
+    rating: 4.9,
+    reviewCount: 8,
+    stock: 1,
+    status: "active",
+    featured: false,
+    material: "Full-Grain English Bridle Leather",
+    sizes: ["UK 32–34"],
+    colors: [
+      { name: "Rich Cognac Tan", hex: "#78350f", imageIndex: 0 }
+    ],
+    tags: ["Belt", "Mulberry", "Leather", "Accessories", "Tan"],
+    images: [
+      "https://images.unsplash.com/photo-1624222247344-550fb60583dc?w=800&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80"
+    ],
+    bulletPoints: [
+      "Authentic Mulberry full-grain bridle leather belt with subtle debossed tree logo.",
+      "Solid antique brass roller buckle.",
+      "Natural leather patina with decades of life ahead.",
+      "1-of-1 pre-loved item."
+    ],
+    description: "Exquisite English leathercraft. Vegetable-tanned bridle leather finished with beveled hand-waxed edges.",
+    specifications: {
+      "Brand": "Mulberry",
+      "Box / Item Code": "A0003",
+      "Condition Grade": "Very Good",
+      "Size": "Fits 32 to 34 inch waist",
+      "Stock": "1 of 1"
+    }
+  }
+];
+
+export const INITIAL_REVIEWS: CustomerReview[] = [
+  {
+    id: "rev-1",
+    author: "Charlotte M.",
+    location: "Kensington, London",
+    rating: 5,
+    date: "14 Sep 2026",
+    verified: true,
+    title: "Remarkable Kate Spade quality — like new!",
+    comment: "I bought the Kate Spade piece and could not believe how pristine it was. Packed safely with Evri delivery arriving in 2 days. Truly sustainable luxury with soul!",
+    variantPurchased: "BOX 1-2 (US 2 / UK 6)",
+    helpfulCount: 28
+  },
+  {
+    id: "rev-2",
+    author: "Gemma H.",
+    location: "Manchester, UK",
+    rating: 5,
+    date: "10 Sep 2026",
+    verified: true,
+    title: "1-of-1 vintage treasure with WhatsApp instant updates",
+    comment: "Loved that as soon as I paid with PayPal UK, Dan from Style & Class WhatsApped me with my tracking number and carrier dispatch photo. Knowing the item gets removed so nobody else can take it gave me total peace of mind.",
+    variantPurchased: "BOX 1 -1 (UK 22)",
+    helpfulCount: 19
+  },
+  {
+    id: "rev-3",
+    author: "Eleanor T.",
+    location: "Bristol, UK",
+    rating: 5,
+    date: "05 Sep 2026",
+    verified: true,
+    title: "The dark green leather handbag is gorgeous!",
+    comment: "Described as New Without Tags and it genuinely is. Gold hardware still has factory gloss. InPost locker collection made pickup super easy.",
+    variantPurchased: "BOX 1-4 Handbag",
+    helpfulCount: 22
+  }
+];
