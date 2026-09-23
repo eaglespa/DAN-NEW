@@ -17,6 +17,7 @@ import { LegalModal, LegalPolicyType } from './components/LegalModal';
 import { StickyAddToCart } from './components/StickyAddToCart';
 import { SocialProofToast } from './components/SocialProofToast';
 import { FloatingWhatsAppButton } from './components/FloatingWhatsAppButton';
+import { ScrollToTopButton } from './components/ScrollToTopButton';
 import { RelatedProducts } from './components/RelatedProducts';
 import { Footer } from './components/Footer';
 import { Product, CartItem, Order, StoreSettings } from './types';
@@ -546,6 +547,11 @@ export default function App() {
         settings={settings}
         currentProduct={activePage === 'detail' ? currentProduct : null}
         activePage={activePage}
+        hasStickyBar={activePage === 'detail' && !isCurrentProductSoldOut}
+      />
+
+      {/* Floating Left-Side Jump to Top Button */}
+      <ScrollToTopButton
         hasStickyBar={activePage === 'detail' && !isCurrentProductSoldOut}
       />
 

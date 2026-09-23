@@ -3,6 +3,7 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import QRCode from "qrcode";
+import JSZip from "jszip";
 import { createServer as createViteServer } from "vite";
 import { INITIAL_PRODUCTS, INITIAL_SETTINGS } from "./src/data/initialProducts.js";
 import { Product, Order, StoreSettings } from "./src/types.js";
@@ -433,6 +434,58 @@ app.get("/api/paypal/config", (req, res) => {
     currency: settings.currency || "GBP",
     configured: Boolean(clientId && clientId !== "sb")
   });
+});
+
+// GET complete project as a downloadable ZIP archive
+app.get(["/api/download-zip", "/download.zip"], async (req, res) => {
+  try {
+    const zip = new JSZip();
+    const rootDir = process.cwd();
+
+    const ignoredDirs = new Set(["node_modules", ".git", "dist", ".vite"]);
+    const ignoredFiles = new Set([".DS_Store", "style-and-class-london-store.zip"]);
+
+    function addDirectoryToZip(currentDir: string, zipFolder: JSZip) {
+      const entries = fs.readdirSync(currentDir, { withFileTypes: true });
+
+      for (const entry of entries) {
+        const fullPath = path.join(currentDir, entry.name);
+        const relativeName = entry.name;
+
+        if (entry.isDirectory()) {
+          if (ignoredDirs.has(relativeName)) continue;
+          const subFolder = zipFolder.folder(relativeName);
+          if (subFolder) {
+            addDirectoryToZip(fullPath, subFolder);
+          }
+        } else if (entry.isFile()) {
+          if (ignoredFiles.has(relativeName) || relativeName.endsWith(".zip")) continue;
+          try {
+            const fileData = fs.readFileSync(fullPath);
+            zipFolder.file(relativeName, fileData);
+          } catch (e) {
+            // Ignore unreadable or locked files
+          }
+        }
+      }
+    }
+
+    addDirectoryToZip(rootDir, zip);
+
+    const zipBuffer = await zip.generateAsync({
+      type: "nodebuffer",
+      compression: "DEFLATE",
+      compressionOptions: { level: 6 }
+    });
+
+    res.setHeader("Content-Disposition", 'attachment; filename="style-and-class-london-store.zip"');
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Length", zipBuffer.length);
+    res.send(zipBuffer);
+  } catch (err) {
+    console.error("Failed to generate ZIP:", err);
+    res.status(500).json({ error: "Failed to generate project ZIP archive." });
+  }
 });
 
 // ==================== VITE & STATIC SERVING ====================

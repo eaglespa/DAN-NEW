@@ -196,6 +196,15 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <a
+              href="/api/download-zip"
+              download="style-and-class-london-store.zip"
+              title="Download entire website as ZIP"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#d4a853]/20 hover:bg-[#d4a853] text-[#d4a853] hover:text-black border border-[#d4a853]/50 rounded-lg text-xs font-bold transition-all"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Export ZIP</span>
+            </a>
             <button
               type="button"
               onClick={onRefreshData}

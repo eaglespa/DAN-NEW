@@ -265,7 +265,7 @@ export const Footer: React.FC<FooterProps> = ({
               </li>
             </ul>
 
-            <div className="pt-3">
+            <div className="pt-3 flex flex-col gap-2">
               <button
                 id="footer-open-admin-btn"
                 type="button"
@@ -275,13 +275,57 @@ export const Footer: React.FC<FooterProps> = ({
                 <Database className="w-3.5 h-3.5 text-[#d4a853]" />
                 <span>Store Database &amp; Admin</span>
               </button>
+
+              <a
+                href="/api/download-zip"
+                download="style-and-class-london-store.zip"
+                className="px-3 py-1.5 text-[11px] text-slate-400 hover:text-[#d4a853] flex items-center gap-1.5 transition-colors"
+                title="Download full project code as ZIP"
+              >
+                <span>📦 Download Store Source Code (.zip)</span>
+              </a>
             </div>
           </div>
         </div>
 
         {/* Payment Methods & Copyright */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <p>&copy; {new Date().getFullYear()} Style And Class London. Pre-Loved Fashion. All rights reserved.</p>
+          <div className="flex flex-col sm:flex-row items-center sm:items-baseline gap-1.5 sm:gap-2 text-center sm:text-left">
+            <p>&copy; {new Date().getFullYear()} Style And Class London. Pre-Loved Fashion. All rights reserved.</p>
+            <span className="hidden sm:inline text-slate-700">&bull;</span>
+            <div className="relative group inline-block">
+              <span className="text-slate-400 font-medium cursor-pointer transition-colors group-hover:text-[#d4a853] inline-flex items-center gap-1">
+                Designed by <strong className="font-bold text-slate-300 group-hover:text-[#d4a853] transition-colors">ROMERO&apos;S STUDIOS</strong>
+              </span>
+
+              {/* Hover Tooltip showing Romero's Studios contact numbers */}
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 hidden group-hover:flex flex-col items-center z-50 pointer-events-auto transition-all animate-fade-in">
+                <div className="bg-[#13151f] text-white border border-[#d4a853]/60 rounded-xl px-3.5 py-2.5 shadow-2xl shadow-black/80 whitespace-nowrap text-center text-xs">
+                  <div className="flex items-center justify-center gap-1.5 font-bold text-[#d4a853] pb-1 border-b border-slate-800 text-[11px] uppercase tracking-wider">
+                    <span>Romero&apos;s Studios Contact</span>
+                  </div>
+                  <div className="mt-1.5 flex flex-col gap-1 font-mono text-[11px] text-slate-200">
+                    <a
+                      href="tel:+201107871007"
+                      className="hover:text-[#d4a853] transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Phone className="w-3 h-3 text-[#d4a853]" />
+                      <span>+201107871007</span>
+                    </a>
+                    <a
+                      href="tel:+201224278490"
+                      className="hover:text-[#d4a853] transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Phone className="w-3 h-3 text-[#d4a853]" />
+                      <span>+201224278490</span>
+                    </a>
+                  </div>
+                </div>
+                {/* Arrow Pointer */}
+                <div className="w-2.5 h-2.5 bg-[#13151f] border-r border-b border-[#d4a853]/60 rotate-45 -mt-1.5" />
+              </div>
+            </div>
+          </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
             <span className="bg-[#181a24] border border-slate-800 text-slate-300 px-2.5 py-1 rounded text-[11px] font-bold">
