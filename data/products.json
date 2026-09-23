@@ -15,8 +15,8 @@
     "currencySymbol": "£",
     "rating": 4.9,
     "reviewCount": 14,
-    "stock": 1,
-    "status": "active",
+    "stock": 0,
+    "status": "archived",
     "featured": true,
     "material": "Breathable Lightweight Viscose",
     "sizes": [
@@ -82,8 +82,8 @@
     "currencySymbol": "£",
     "rating": 5,
     "reviewCount": 19,
-    "stock": 1,
-    "status": "active",
+    "stock": 0,
+    "status": "archived",
     "featured": true,
     "material": "Fine Blouse Weave",
     "sizes": [

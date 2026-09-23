@@ -56,22 +56,45 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
       )
       .join('\n');
 
-    const alertText = `🚨 STYLE & CLASS LONDON - PAID ORDER ALERT 🚨
+    const alertText = `🚨 *NEW PAID ORDER ALERT - STYLE & CLASS LONDON* 🚨
 Order ID: #${order.id}
-Status: PAID ALREADY via PayPal UK ✅
+Status: *PAID ALREADY via PayPal UK* ✅
+Date: ${new Date(order.createdAt).toLocaleString('en-GB')}
 
-1️⃣ BUYER NAME: ${order.customer.fullName}
-2️⃣ BUYER ADDRESS: ${fullAddress}
-Address QR Code: ${qrImageSrc}
-Google Maps: ${googleMapsUrl}
-3️⃣ BUYER PHONE: ${order.customer.phone}
-4️⃣ PRODUCT NAME & PRICE:
-${itemsText}
-Subtotal: £${order.subtotal.toFixed(2)}
-Shipping: ${order.shipping === 0 ? 'FREE' : `£${order.shipping.toFixed(2)}`}
-Total Paid: £${order.total.toFixed(2)}
-5️⃣ PRODUCT PHOTO: ${order.items[0]?.image || ''}
-6️⃣ SHIPPING COMPANY: ${order.carrierName || 'Evri Standard Delivery'}`;
+----------------------------------------
+1️⃣ *BUYER NAME:*
+${order.customer.fullName}
+
+2️⃣ *BUYER ADDRESS & QR CODE:*
+📍 ${fullAddress}
+📲 *Address QR Code (Scan/Print):*
+${qrImageSrc}
+🗺️ *Google Maps:* ${googleMapsUrl}
+
+3️⃣ *BUYER PHONE NUMBER:*
+📞 ${order.customer.phone}
+💬 *Chat directly:* https://wa.me/${cleanPhone.replace('+', '')}
+
+4️⃣ *PRODUCT NAME & PRICE:*
+${order.items.map((it, idx) => `📦 *ITEM ${idx + 1}:*
+• *Product Name:* ${it.productTitle} [${it.code || '1-of-1'}]
+• *Size:* ${it.size} | *Qty:* ${it.quantity}
+• *Price:* £${it.price.toFixed(2)}
+• *Product Photo:* ${it.image}`).join('\n\n')}
+
+💰 *PAYMENT SUMMARY:*
+• Subtotal: £${order.subtotal.toFixed(2)}
+• Shipping: ${order.shipping === 0 ? 'FREE UK Delivery' : `£${order.shipping.toFixed(2)}`}
+• *TOTAL PAID: £${order.total.toFixed(2)} [PAID]*
+
+5️⃣ *PRODUCT PHOTO (At least 1 photo):*
+${order.items.map((it, idx) => `📸 *Photo ${idx + 1} (${it.productTitle}):*\n${it.image}`).join('\n\n')}
+
+6️⃣ *SHIPPING COMPANY:*
+🚚 *${order.carrierName || 'Evri Standard Delivery'}* (${order.shipping === 0 ? 'FREE' : `£${order.shipping.toFixed(2)}`})
+----------------------------------------
+
+${removedProducts && removedProducts.length > 0 ? `🚨 *INVENTORY AUTOMATION (1-PIECE RULE):*\nSold out & automatically removed from active store: ${removedProducts.join(', ')}\n\n` : ''}Style And Class London · Sustainable Pre-Loved Luxury`;
 
     navigator.clipboard.writeText(alertText).then(() => {
       setCopied(true);

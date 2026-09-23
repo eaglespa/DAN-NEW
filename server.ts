@@ -262,7 +262,16 @@ app.post("/api/orders", async (req, res) => {
   }
 
   // Carrier selection support: Evri (£2.60), InPost (£2.89), Royal Mail (£3.65)
-  const carrierKey = req.body.carrier || 'evri';
+  const rawCarrier = String(req.body.carrier || 'evri').toLowerCase();
+  let carrierKey = 'evri';
+  if (rawCarrier.includes('royal')) {
+    carrierKey = 'royalmail';
+  } else if (rawCarrier.includes('inpost')) {
+    carrierKey = 'inpost';
+  } else {
+    carrierKey = 'evri';
+  }
+
   const carrierRates: { [key: string]: { name: string; cost: number; time: string } } = {
     evri: { name: 'Evri Standard Delivery', cost: 2.60, time: '2-3 Working Days' },
     inpost: { name: 'InPost Locker / Shop', cost: 2.89, time: '2-3 Working Days' },
@@ -291,6 +300,9 @@ app.post("/api/orders", async (req, res) => {
     console.error("QR Code generation error:", err);
   }
 
+  const normalizedPaymentMethod = paymentMethod || "paypal_uk";
+  const isPaid = normalizedPaymentMethod === "paypal_uk" || normalizedPaymentMethod === "card_uk" || normalizedPaymentMethod === "card";
+
   const orderId = `SAC-${Math.floor(100000 + Math.random() * 900000)}`;
   const order: Order = {
     id: orderId,
@@ -304,8 +316,8 @@ app.post("/api/orders", async (req, res) => {
     discount,
     total,
     currency: settings.currency || "GBP",
-    paymentMethod: paymentMethod || "paypal_uk",
-    paymentStatus: paymentMethod === "paypal_uk" ? "completed" : "pending",
+    paymentMethod: normalizedPaymentMethod,
+    paymentStatus: isPaid ? "completed" : "pending",
     whatsappNotified: false,
     addressQrDataUrl,
     addressQrUrl,
@@ -355,9 +367,13 @@ app.post("/api/orders", async (req, res) => {
       ? `\n\n🚨 *INVENTORY AUTOMATION (1-PIECE RULE):*\nSold out & automatically removed from active store: ${removedFromStoreProducts.join(", ")}`
       : "";
 
+  const paymentLabel = normalizedPaymentMethod === "card_uk" || normalizedPaymentMethod === "card"
+    ? "Debit / Credit Card (UK Secured)"
+    : "PayPal UK";
+
   const whatsappMessage = `🚨 *NEW PAID ORDER ALERT - STYLE & CLASS LONDON* 🚨
 Order ID: #${order.id}
-Status: *PAID ALREADY via PayPal UK* ✅
+Status: *PAID ALREADY via ${paymentLabel}* ✅
 Date: ${new Date().toLocaleString("en-GB")}
 
 ----------------------------------------

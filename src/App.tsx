@@ -45,6 +45,8 @@ export default function App() {
   // Modals & Drawers
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isPayPalCheckoutOpen, setIsPayPalCheckoutOpen] = useState(false);
+  const [checkoutCarrier, setCheckoutCarrier] = useState<string>('evri');
+  const [checkoutInitialPaymentMethod, setCheckoutInitialPaymentMethod] = useState<'paypal' | 'card'>('paypal');
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -231,6 +233,23 @@ export default function App() {
         quantity
       }
     ]);
+    setCheckoutInitialPaymentMethod('paypal');
+    setIsCartOpen(false);
+    setIsPayPalCheckoutOpen(true);
+  };
+
+  // Direct Debit/Credit Card Buy Button on Product Page
+  const handleBuyWithCardDirect = () => {
+    if (currentProduct.stock <= 0) return;
+    setCart([
+      {
+        product: currentProduct,
+        selectedColor,
+        selectedSize,
+        quantity
+      }
+    ]);
+    setCheckoutInitialPaymentMethod('card');
     setIsCartOpen(false);
     setIsPayPalCheckoutOpen(true);
   };
@@ -524,6 +543,7 @@ export default function App() {
                     onQuantityChange={setQuantity}
                     onAddToCart={handleAddToCart}
                     onBuyWithPayPal={handleBuyWithPayPalDirect}
+                    onBuyWithCard={handleBuyWithCardDirect}
                     onOrderViaWhatsApp={handleOrderViaWhatsAppDirect}
                     onOpenSizeGuide={() => setIsSizeGuideOpen(true)}
                     currencySymbol={settings.currencySymbol || '£'}
@@ -617,7 +637,15 @@ export default function App() {
         items={cart}
         onUpdateQuantity={handleUpdateQuantity}
         onRemoveItem={handleRemoveCartItem}
-        onCheckoutPayPal={() => {
+        onCheckoutPayPal={(carrier) => {
+          if (carrier) setCheckoutCarrier(carrier);
+          setCheckoutInitialPaymentMethod('paypal');
+          setIsCartOpen(false);
+          setIsPayPalCheckoutOpen(true);
+        }}
+        onCheckoutCard={(carrier) => {
+          if (carrier) setCheckoutCarrier(carrier);
+          setCheckoutInitialPaymentMethod('card');
           setIsCartOpen(false);
           setIsPayPalCheckoutOpen(true);
         }}
@@ -625,7 +653,7 @@ export default function App() {
         currencySymbol={settings.currencySymbol || '£'}
       />
 
-      {/* PayPal UK Checkout Modal */}
+      {/* PayPal UK & Debit/Credit Card Checkout Modal */}
       <PayPalCheckoutModal
         isOpen={isPayPalCheckoutOpen}
         onClose={() => setIsPayPalCheckoutOpen(false)}
@@ -633,6 +661,8 @@ export default function App() {
         currencySymbol={settings.currencySymbol || '£'}
         paypalClientId={settings.paypalClientId}
         merchantWhatsApp={settings.merchantWhatsApp}
+        initialCarrier={checkoutCarrier}
+        initialPaymentMethod={checkoutInitialPaymentMethod}
         onOrderSuccess={handleOrderSuccess}
       />
 

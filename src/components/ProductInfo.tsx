@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Truck, ShieldCheck, RefreshCw, MessageCircle, AlertTriangle, CheckCircle2, Ruler, Flame, Clock, Tag } from 'lucide-react';
+import { Star, Truck, ShieldCheck, RefreshCw, MessageCircle, AlertTriangle, CheckCircle2, Ruler, Flame, Clock, Tag, CreditCard } from 'lucide-react';
 import { Product } from '../types';
 
 interface ProductInfoProps {
@@ -12,6 +12,7 @@ interface ProductInfoProps {
   onQuantityChange: (qty: number) => void;
   onAddToCart: () => void;
   onBuyWithPayPal: () => void;
+  onBuyWithCard?: () => void;
   onOrderViaWhatsApp: () => void;
   onOpenSizeGuide: () => void;
   currencySymbol: string;
@@ -27,6 +28,7 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
   onQuantityChange,
   onAddToCart,
   onBuyWithPayPal,
+  onBuyWithCard,
   onOrderViaWhatsApp,
   onOpenSizeGuide,
   currencySymbol
@@ -215,7 +217,7 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
         </div>
       </div>
 
-      {/* CTA Buttons: Add to Bag, PayPal UK, and WhatsApp */}
+      {/* CTA Buttons: Add to Bag, Card, PayPal UK, and WhatsApp */}
       <div className="flex flex-col gap-2.5 pt-2">
         {/* Primary Add to Cart Button */}
         <button
@@ -229,15 +231,31 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
           <span>{currencySymbol}{product.price.toFixed(2)}</span>
         </button>
 
-        {/* Instant Buy with PayPal UK Button */}
-        <button
-          id="product-paypal-buy-btn"
-          type="button"
-          onClick={onBuyWithPayPal}
-          className="w-full py-3.5 px-6 rounded-2xl bg-[#ffc439] hover:bg-[#ffb000] text-[#003087] font-black text-sm tracking-wide shadow-md transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
-        >
-          <span>Buy with PayPal (UK)</span>
-        </button>
+        {/* Dual Instant Checkout Buttons: Card & PayPal */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {/* Instant Buy with Debit/Credit Card */}
+          <button
+            id="product-card-buy-btn"
+            type="button"
+            onClick={onBuyWithCard || onBuyWithPayPal}
+            className="w-full py-3.5 px-4 rounded-2xl bg-[#181b28] hover:bg-[#202538] text-white font-bold text-xs sm:text-sm tracking-wide border border-[#d4a853]/60 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-md"
+          >
+            <CreditCard className="w-4 h-4 text-[#d4a853]" />
+            <span>Pay with Card</span>
+          </button>
+
+          {/* Instant Buy with PayPal UK Button */}
+          <button
+            id="product-paypal-buy-btn"
+            type="button"
+            onClick={onBuyWithPayPal}
+            className="w-full py-3.5 px-4 rounded-2xl bg-[#ffc439] hover:bg-[#ffb000] text-[#003087] font-black text-xs sm:text-sm tracking-wide shadow-md transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <span>Buy with</span>
+            <span className="italic font-black text-[#003087]">Pay</span>
+            <span className="italic font-black text-[#0079c1] -ml-1">Pal</span>
+          </button>
+        </div>
 
         {/* WhatsApp Direct Order Button */}
         <button

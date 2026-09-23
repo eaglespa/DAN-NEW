@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Trash2, ShoppingBag, ArrowRight, ShieldCheck, Truck, MessageCircle, AlertTriangle } from 'lucide-react';
+import { X, Trash2, ShoppingBag, ArrowRight, ShieldCheck, Truck, MessageCircle, AlertTriangle, CreditCard } from 'lucide-react';
 import { CartItem } from '../types';
 
 interface CartDrawerProps {
@@ -9,6 +9,7 @@ interface CartDrawerProps {
   onUpdateQuantity: (index: number, quantity: number) => void;
   onRemoveItem: (index: number) => void;
   onCheckoutPayPal: (carrier?: string) => void;
+  onCheckoutCard?: (carrier?: string) => void;
   onCheckoutWhatsApp: (carrier?: string) => void;
   currencySymbol: string;
 }
@@ -20,6 +21,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onUpdateQuantity,
   onRemoveItem,
   onCheckoutPayPal,
+  onCheckoutCard,
   onCheckoutWhatsApp,
   currencySymbol
 }) => {
@@ -223,19 +225,34 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 </div>
               </div>
 
-              {/* PayPal UK Checkout Button */}
-              <button
-                id="cart-checkout-paypal-btn"
-                type="button"
-                onClick={() => onCheckoutPayPal(selectedCarrier)}
-                className="w-full py-3.5 px-4 rounded-xl bg-[#ffc439] hover:bg-[#ffb000] text-[#003087] font-black text-xs sm:text-sm tracking-wide shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-101 active:scale-99"
-              >
-                <span>Checkout with</span>
-                <span className="italic font-black text-[#003087]">Pay</span>
-                <span className="italic font-black text-[#0079c1] -ml-1">Pal</span>
-                <span className="text-[10px] bg-white text-slate-900 font-extrabold px-1.5 py-0.5 rounded">UK</span>
-                <ArrowRight className="w-4 h-4 ml-1 text-black" />
-              </button>
+              {/* Payment Methods Buttons */}
+              <div className="space-y-2 pt-1">
+                {/* Debit or Credit Card Direct Button */}
+                <button
+                  id="cart-checkout-card-btn"
+                  type="button"
+                  onClick={() => onCheckoutCard ? onCheckoutCard(selectedCarrier) : onCheckoutPayPal(selectedCarrier)}
+                  className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#d4a853] to-[#c5953b] hover:from-[#e0b764] hover:to-[#d4a853] text-black font-black text-xs sm:text-sm tracking-wide shadow-lg shadow-[#d4a853]/20 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-101 active:scale-99"
+                >
+                  <CreditCard className="w-4 h-4 text-black" />
+                  <span>Pay with Debit or Credit Card</span>
+                  <ArrowRight className="w-4 h-4 ml-1 text-black" />
+                </button>
+
+                {/* PayPal UK Checkout Button */}
+                <button
+                  id="cart-checkout-paypal-btn"
+                  type="button"
+                  onClick={() => onCheckoutPayPal(selectedCarrier)}
+                  className="w-full py-3 px-4 rounded-xl bg-[#ffc439] hover:bg-[#ffb000] text-[#003087] font-black text-xs sm:text-sm tracking-wide shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-101 active:scale-99"
+                >
+                  <span>Pay with</span>
+                  <span className="italic font-black text-[#003087]">Pay</span>
+                  <span className="italic font-black text-[#0079c1] -ml-1">Pal</span>
+                  <span className="text-[10px] bg-white text-slate-900 font-extrabold px-1.5 py-0.5 rounded">UK</span>
+                  <span className="text-[11px] font-sans text-slate-800 ml-1">/ Pay in 3</span>
+                </button>
+              </div>
 
               {/* WhatsApp Checkout Option */}
               <button
