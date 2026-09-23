@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import path from "path";
 import fs from "fs";
@@ -52,6 +53,12 @@ try {
 try {
   if (fs.existsSync(SETTINGS_FILE)) {
     settings = JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf-8"));
+    if (process.env.PAYPAL_CLIENT_ID) {
+      settings.paypalClientId = process.env.PAYPAL_CLIENT_ID;
+    }
+    if (process.env.WHATSAPP_BUSINESS_PHONE) {
+      settings.merchantWhatsApp = process.env.WHATSAPP_BUSINESS_PHONE;
+    }
   } else {
     settings = { ...INITIAL_SETTINGS };
     if (process.env.WHATSAPP_BUSINESS_PHONE) {
@@ -64,6 +71,9 @@ try {
   }
 } catch (e) {
   settings = { ...INITIAL_SETTINGS };
+  if (process.env.PAYPAL_CLIENT_ID) {
+    settings.paypalClientId = process.env.PAYPAL_CLIENT_ID;
+  }
 }
 
 function persistProducts() {
@@ -413,6 +423,16 @@ app.post("/api/settings", (req, res) => {
   };
   persistSettings();
   res.json({ success: true, settings });
+});
+
+// GET PayPal configuration for client checkout
+app.get("/api/paypal/config", (req, res) => {
+  const clientId = process.env.PAYPAL_CLIENT_ID || settings.paypalClientId || "";
+  res.json({
+    clientId,
+    currency: settings.currency || "GBP",
+    configured: Boolean(clientId && clientId !== "sb")
+  });
 });
 
 // ==================== VITE & STATIC SERVING ====================

@@ -7,7 +7,7 @@ export const INITIAL_SETTINGS: StoreSettings = {
   merchantPhone: "+44 07591878215",
   merchantEmail: "styleandclasslondon@gmail.com",
   location: "London, United Kingdom",
-  paypalClientId: "sb",
+  paypalClientId: "BAAhhnSf00f00xNNYjsVnZoo0dVIAV76hZPo5AzXLCM1uJA5PU4IyrVb2vdeYVLTVgVbM-n_Gu7lNoWZow",
   currency: "GBP",
   currencySymbol: "£",
   freeShippingThreshold: 45.00,
