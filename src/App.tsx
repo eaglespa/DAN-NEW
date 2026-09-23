@@ -12,6 +12,7 @@ import { CartDrawer } from './components/CartDrawer';
 import { PayPalCheckoutModal } from './components/PayPalCheckoutModal';
 import { OrderSuccessModal } from './components/OrderSuccessModal';
 import { AdminModal } from './components/AdminModal';
+import { AdminPasswordModal } from './components/AdminPasswordModal';
 import { QuickViewModal } from './components/QuickViewModal';
 import { LegalModal, LegalPolicyType } from './components/LegalModal';
 import { StickyAddToCart } from './components/StickyAddToCart';
@@ -46,8 +47,19 @@ export default function App() {
   const [isPayPalCheckoutOpen, setIsPayPalCheckoutOpen] = useState(false);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [legalPolicyType, setLegalPolicyType] = useState<LegalPolicyType>(null);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+
+  // Trigger protected store brain/database
+  const handleRequestAdminAccess = () => {
+    setIsPasswordModalOpen(true);
+  };
+
+  const handleAdminPasswordSuccess = () => {
+    setIsPasswordModalOpen(false);
+    setIsAdminOpen(true);
+  };
 
   const [successOrderData, setSuccessOrderData] = useState<{
     order: Order;
@@ -353,7 +365,7 @@ export default function App() {
         onOpenLegal={(policy) => setLegalPolicyType(policy)}
         cartCount={cart.reduce((a, b) => a + b.quantity, 0)}
         onOpenCart={() => setIsCartOpen(true)}
-        onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenAdmin={handleRequestAdminAccess}
         onSelectProduct={handleSelectProduct}
         products={activeProducts}
         merchantWhatsApp={settings.merchantWhatsApp}
@@ -656,9 +668,16 @@ export default function App() {
         currencySymbol={settings.currencySymbol || '£'}
       />
 
+      {/* Security Gate / Password Protection Modal for Store Brain */}
+      <AdminPasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+        onSuccess={handleAdminPasswordSuccess}
+      />
+
       {/* Footer with full navigation, social links, legal modals, and support */}
       <Footer
-        onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenAdmin={handleRequestAdminAccess}
         settings={settings}
         onNavigate={handleNavigate}
         onOpenLegal={(policy) => setLegalPolicyType(policy)}
