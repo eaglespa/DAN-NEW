@@ -77,34 +77,122 @@ export const HomeView: React.FC<HomeViewProps> = ({
   return (
     <div className="space-y-16 sm:space-y-24 text-slate-100 pb-16">
       {/* ===================== HERO SECTION ===================== */}
-      <section className="relative min-h-[580px] sm:min-h-[640px] flex items-center justify-center overflow-hidden border-b border-[#d4a853]/25 bg-gradient-to-b from-[#0e1017] via-[#090a0f] to-[#07080b]">
-        {/* Subtle Background Ambience */}
-        <div className="absolute inset-0 opacity-20 pointer-events-none">
-          <img
-            src={heroImages[heroBgIndex]}
-            alt="Hero Background"
-            className="w-full h-full object-cover filter blur-md scale-105 transition-opacity duration-1000"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#090a0f] via-[#090a0f]/80 to-transparent" />
+      <section className="relative min-h-[620px] sm:min-h-[700px] flex items-center justify-center overflow-hidden border-b border-[#d4a853]/25 bg-gradient-to-b from-[#0a0c12] via-[#06070a] to-[#050608]">
+        {/* London Night Sky and Citylights Glow Layer */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {/* Subtle Background Carousel of garments */}
+          <div className="absolute inset-0 opacity-15 mix-blend-screen">
+            <img
+              src={heroImages[heroBgIndex]}
+              alt="Hero Background"
+              className="w-full h-full object-cover filter blur-lg scale-105 transition-opacity duration-1000"
+            />
+          </div>
+
+          {/* Golden & Amber City Ambient Radial Glows */}
+          <div className="absolute -top-32 left-1/4 w-96 h-96 bg-[#d4a853]/15 rounded-full blur-[110px] pointer-events-none" />
+          <div className="absolute -top-20 right-1/4 w-[28rem] h-[28rem] bg-[#f59e0b]/10 rounded-full blur-[120px] pointer-events-none" />
+          <div className="absolute bottom-10 left-1/3 w-80 h-80 bg-[#38bdf8]/10 rounded-full blur-[100px] pointer-events-none" />
+
+          {/* London Skyline Architectural Silhouette (The Shard, Gherkin, London Eye, Big Ben) */}
+          <div className="absolute bottom-0 left-0 right-0 h-44 sm:h-56 opacity-30 pointer-events-none flex items-end">
+            <svg
+              className="w-full h-full text-slate-800"
+              viewBox="0 0 1440 280"
+              fill="none"
+              preserveAspectRatio="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <defs>
+                <linearGradient id="skylineGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#d4a853" stopOpacity="0.5" />
+                  <stop offset="60%" stopColor="#1e2230" stopOpacity="0.85" />
+                  <stop offset="100%" stopColor="#090a0f" stopOpacity="1" />
+                </linearGradient>
+              </defs>
+
+              {/* Tower Bridge & The Shard & London Skyline silhouette shapes */}
+              <path
+                d="M0 280 L0 230 L40 230 L40 210 L65 210 L65 230 L110 230 L110 170 L130 170 L130 230 L180 230 L220 120 L240 120 L280 230 L320 230 L320 190 L345 190 L345 150 L355 110 L365 150 L365 230 L430 230 L450 180 L480 180 L500 230 L560 230 L560 140 L590 140 L590 80 L600 50 L610 80 L610 140 L640 140 L640 230 L710 230 L750 160 L780 160 L820 230 L880 230 L880 190 L910 190 L930 90 L940 90 L960 190 L990 190 L990 230 L1050 230 L1070 150 L1110 150 L1130 230 L1190 230 L1210 130 L1230 130 L1250 230 L1320 230 L1340 175 L1375 175 L1395 230 L1440 230 L1440 280 Z"
+                fill="url(#skylineGrad)"
+              />
+
+              {/* Animated Rotating London Eye Wheel Silhouette */}
+              <g className="animate-london-eye">
+                <circle cx="1170" cy="170" r="45" stroke="#d4a853" strokeWidth="1.8" strokeOpacity="0.45" strokeDasharray="4 4" />
+                <line x1="1170" y1="125" x2="1170" y2="215" stroke="#d4a853" strokeWidth="1.2" strokeOpacity="0.4" />
+                <line x1="1125" y1="170" x2="1215" y2="170" stroke="#d4a853" strokeWidth="1.2" strokeOpacity="0.4" />
+                <line x1="1138" y1="138" x2="1202" y2="202" stroke="#d4a853" strokeWidth="1.2" strokeOpacity="0.4" />
+                <line x1="1138" y1="202" x2="1202" y2="138" stroke="#d4a853" strokeWidth="1.2" strokeOpacity="0.4" />
+              </g>
+              <circle cx="1170" cy="170" r="5" fill="#d4a853" fillOpacity="0.8" />
+              <line x1="1170" y1="170" x2="1170" y2="230" stroke="#d4a853" strokeWidth="2.5" strokeOpacity="0.5" />
+            </svg>
+          </div>
+
+          {/* Sweeping Night City Beams (Searchlights like West End / Westminster) */}
+          <div className="absolute -bottom-10 left-1/4 w-36 h-[520px] bg-gradient-to-t from-[#d4a853]/35 via-[#f5c469]/15 to-transparent blur-3xl transform origin-bottom animate-city-beam pointer-events-none" />
+          <div className="absolute -bottom-10 right-1/3 w-44 h-[550px] bg-gradient-to-t from-[#38bdf8]/30 via-[#60a5fa]/15 to-transparent blur-3xl transform origin-bottom animate-city-beam pointer-events-none" style={{ animationDelay: '-4.5s' }} />
+
+          {/* Living London Night Traffic Lights (Fast Red & White Car Light Streaks along Embankment) */}
+          <div className="absolute bottom-8 left-0 right-0 h-1 pointer-events-none overflow-hidden opacity-60">
+            {/* White Headlights rushing forward */}
+            <div className="absolute top-0 h-[2px] w-48 bg-gradient-to-r from-transparent via-white to-amber-200 blur-[0.8px] shadow-[0_0_12px_2px_rgba(255,255,255,0.9)] animate-traffic-left-1" />
+            <div className="absolute top-0 h-[2px] w-64 bg-gradient-to-r from-transparent via-amber-100 to-amber-300 blur-[0.8px] shadow-[0_0_12px_2px_rgba(251,191,36,0.9)] animate-traffic-left-2" />
+            {/* Red Taillights rushing reverse */}
+            <div className="absolute top-0 h-[2px] w-56 bg-gradient-to-r from-rose-500 via-red-500 to-transparent blur-[0.8px] shadow-[0_0_14px_3px_rgba(239,68,68,0.9)] animate-traffic-right-1" />
+            <div className="absolute top-0 h-[2px] w-72 bg-gradient-to-r from-red-600 via-rose-400 to-transparent blur-[0.8px] shadow-[0_0_14px_3px_rgba(244,63,94,0.9)] animate-traffic-right-2" />
+          </div>
+
+          {/* Floating Gold Luxury Sparks (Ascending like London gala stardust) */}
+          <div className="absolute bottom-24 left-[15%] w-2 h-2 rounded-full bg-[#d4a853] shadow-[0_0_12px_3px_rgba(212,168,83,0.9)] animate-sparkle-1 pointer-events-none" />
+          <div className="absolute bottom-20 left-[28%] w-1.5 h-1.5 rounded-full bg-[#fef08a] shadow-[0_0_10px_2px_rgba(254,240,138,0.9)] animate-sparkle-2 pointer-events-none" />
+          <div className="absolute bottom-16 right-[22%] w-2.5 h-2.5 rounded-full bg-[#fbbf24] shadow-[0_0_14px_4px_rgba(251,191,36,0.9)] animate-sparkle-3 pointer-events-none" />
+          <div className="absolute bottom-32 right-[36%] w-2 h-2 rounded-full bg-[#d4a853] shadow-[0_0_12px_3px_rgba(212,168,83,0.9)] animate-sparkle-4 pointer-events-none" />
+          <div className="absolute bottom-12 left-[50%] w-1.5 h-1.5 rounded-full bg-[#fde047] shadow-[0_0_10px_2px_rgba(253,224,71,0.9)] animate-sparkle-5 pointer-events-none" />
+
+          {/* Shimmering Bokeh Citylights (London West End & Piccadilly Ambiance) */}
+          {/* Group 1: Warm Amber & Gold streetlights */}
+          <div className="absolute top-[18%] left-[8%] w-3 h-3 rounded-full bg-[#f59e0b] blur-[1px] shadow-[0_0_16px_5px_rgba(245,158,11,0.85)] animate-citylight" />
+          <div className="absolute top-[28%] left-[16%] w-4.5 h-4.5 rounded-full bg-[#d4a853] blur-[1px] shadow-[0_0_22px_8px_rgba(212,168,83,0.9)] animate-citylight-slow" style={{ animationDelay: '1.2s' }} />
+          <div className="absolute top-[42%] left-[6%] w-2.5 h-2.5 rounded-full bg-[#fbbf24] blur-[1px] shadow-[0_0_14px_4px_rgba(251,191,36,0.8)] animate-citylight-fast" style={{ animationDelay: '0.6s' }} />
+          <div className="absolute top-[65%] left-[12%] w-3.5 h-3.5 rounded-full bg-[#f59e0b] blur-[1.5px] shadow-[0_0_18px_6px_rgba(245,158,11,0.8)] animate-citylight" style={{ animationDelay: '2.4s' }} />
+          
+          {/* Group 2: Center and London Bridges glow */}
+          <div className="absolute top-[14%] right-[24%] w-3.5 h-3.5 rounded-full bg-[#38bdf8] blur-[1px] shadow-[0_0_16px_5px_rgba(56,189,248,0.8)] animate-citylight-slow" style={{ animationDelay: '1.8s' }} />
+          <div className="absolute top-[22%] right-[12%] w-5 h-5 rounded-full bg-[#d4a853] blur-[1px] shadow-[0_0_24px_8px_rgba(212,168,83,0.95)] animate-citylight" style={{ animationDelay: '0.4s' }} />
+          <div className="absolute top-[36%] right-[6%] w-3 h-3 rounded-full bg-[#f43f5e] blur-[1px] shadow-[0_0_14px_4px_rgba(244,63,94,0.7)] animate-citylight-fast" style={{ animationDelay: '1.5s' }} />
+          <div className="absolute top-[54%] right-[15%] w-3.5 h-3.5 rounded-full bg-[#fbbf24] blur-[1px] shadow-[0_0_18px_5px_rgba(251,191,36,0.85)] animate-citylight-slow" style={{ animationDelay: '2.1s' }} />
+          
+          {/* Lower skyline window lights */}
+          <div className="absolute bottom-28 left-[23%] w-2 h-2 rounded-full bg-[#fef08a] shadow-[0_0_12px_4px_rgba(254,240,138,0.9)] animate-citylight-fast" style={{ animationDelay: '0.9s' }} />
+          <div className="absolute bottom-32 left-[39%] w-2 h-2 rounded-full bg-[#38bdf8] shadow-[0_0_12px_4px_rgba(56,189,248,0.85)] animate-citylight" style={{ animationDelay: '2.7s' }} />
+          <div className="absolute bottom-24 right-[31%] w-2.5 h-2.5 rounded-full bg-[#d4a853] shadow-[0_0_14px_5px_rgba(212,168,83,0.85)] animate-citylight-slow" style={{ animationDelay: '1.1s' }} />
+          <div className="absolute bottom-36 right-[42%] w-2 h-2 rounded-full bg-[#fb923c] shadow-[0_0_12px_4px_rgba(251,146,60,0.85)] animate-citylight-fast" style={{ animationDelay: '0.3s' }} />
+
+          {/* Smooth bottom blend */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#07080b] via-[#07080b]/60 to-transparent" />
         </div>
 
         {/* Hero Content */}
         <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-16 sm:py-24 space-y-6">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#d4a853]/15 border border-[#d4a853]/40 text-[#f5c469] text-xs font-bold uppercase tracking-widest animate-in fade-in zoom-in duration-300">
+          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#131722]/85 border border-[#d4a853]/60 text-[#f5c469] text-xs font-bold uppercase tracking-widest shadow-xl shadow-black/60 backdrop-blur-md animate-in fade-in zoom-in duration-300">
+            <span className="w-2 h-2 rounded-full bg-[#d4a853] animate-ping" />
             <Sparkles className="w-3.5 h-3.5 text-[#d4a853]" />
-            <span>Pre-Loved &amp; Curated &middot; London Studio</span>
+            <span>London Night Lights &middot; Pre-Loved Boutique</span>
           </div>
 
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white font-serif tracking-tight leading-tight">
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white font-serif tracking-tight leading-tight drop-shadow-2xl">
             Find Your Next{' '}
-            <span className="text-[#d4a853] italic font-serif underline decoration-[#d4a853]/40 underline-offset-8">
-              {displayText}
+            <span className="relative inline-block text-[#d4a853] italic font-serif animate-neon-text">
+              <span className="relative z-10">{displayText}</span>
               <span className="animate-pulse">|</span>
+              <span className="absolute -bottom-1 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#d4a853] to-transparent rounded-full opacity-90" />
             </span>
           </h1>
 
-          <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto font-normal leading-relaxed">
-            Curated second-hand clothing with soul. Every piece has a story — make it yours. Unique 1-of-1 pieces inspected in London with fast UK delivery.
+          <p className="text-base sm:text-lg text-slate-200 max-w-2xl mx-auto font-normal leading-relaxed drop-shadow-md">
+            Curated vintage &amp; designer fashion illuminated under the London night lights. Each garment is a unique 1-of-1 piece, authenticated and dispatched directly across the UK.
           </p>
 
           {/* Call to Actions */}
@@ -112,16 +200,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <button
               type="button"
               onClick={() => onNavigateCollections('all')}
-              className="w-full sm:w-auto px-8 py-3.5 bg-[#d4a853] hover:bg-[#c29642] text-black font-extrabold text-sm rounded-xl shadow-lg shadow-[#d4a853]/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95"
+              className="relative group overflow-hidden w-full sm:w-auto px-8 py-3.5 bg-[#d4a853] hover:bg-[#c29642] text-black font-extrabold text-sm rounded-xl shadow-xl shadow-[#d4a853]/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.03] active:scale-95 cursor-pointer"
             >
+              {/* Shimmer light sweep across button */}
+              <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
               <span>Shop All Items</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
 
             <button
               type="button"
               onClick={() => onNavigateCollections('women')}
-              className="w-full sm:w-auto px-6 py-3.5 bg-[#141722] hover:bg-[#1a1f2e] text-white font-bold text-sm rounded-xl border border-slate-700/80 flex items-center justify-center gap-2 transition-all"
+              className="w-full sm:w-auto px-6 py-3.5 bg-[#141722]/90 hover:bg-[#1a1f2e] text-white hover:text-[#d4a853] font-bold text-sm rounded-xl border border-slate-700/80 hover:border-[#d4a853]/60 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer backdrop-blur-sm"
             >
               <span>Explore Women</span>
             </button>
@@ -129,7 +219,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <button
               type="button"
               onClick={() => onNavigateCollections('accessories')}
-              className="w-full sm:w-auto px-6 py-3.5 bg-[#141722] hover:bg-[#1a1f2e] text-white font-bold text-sm rounded-xl border border-slate-700/80 flex items-center justify-center gap-2 transition-all"
+              className="w-full sm:w-auto px-6 py-3.5 bg-[#141722]/90 hover:bg-[#1a1f2e] text-white hover:text-[#d4a853] font-bold text-sm rounded-xl border border-slate-700/80 hover:border-[#d4a853]/60 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95 cursor-pointer backdrop-blur-sm"
             >
               <span>Explore Bags</span>
             </button>
