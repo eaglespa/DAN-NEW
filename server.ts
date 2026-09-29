@@ -4,7 +4,6 @@ import path from "path";
 import fs from "fs";
 import QRCode from "qrcode";
 import JSZip from "jszip";
-import { createServer as createViteServer } from "vite";
 import { INITIAL_PRODUCTS, INITIAL_SETTINGS } from "./src/data/initialProducts.js";
 import { Product, Order, StoreSettings } from "./src/types.js";
 
@@ -555,6 +554,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { 
         middlewareMode: true,
@@ -576,4 +576,10 @@ async function startServer() {
   });
 }
 
-startServer();
+// Only start the HTTP listener when running locally or standalone, not in Vercel serverless functions
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+export { app };
+export default app;
