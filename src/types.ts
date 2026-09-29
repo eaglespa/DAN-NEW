@@ -100,6 +100,7 @@ export interface StoreSettings {
   merchantPayPalEmail?: string;
   location: string;
   paypalClientId: string;
+  paypalSecret?: string;
   paypalApiKey?: string;
   paypalConnected?: boolean;
   currency: string;

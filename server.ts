@@ -61,11 +61,16 @@ try {
 try {
   if (fs.existsSync(SETTINGS_FILE)) {
     settings = JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf-8"));
-    if (process.env.PAYPAL_CLIENT_ID) {
+    if (!settings.paypalClientId && process.env.PAYPAL_CLIENT_ID) {
       settings.paypalClientId = process.env.PAYPAL_CLIENT_ID;
     }
-    if (process.env.PAYPAL_API_KEY || process.env.PAYPAL_CLIENT_SECRET) {
-      settings.paypalApiKey = process.env.PAYPAL_API_KEY || process.env.PAYPAL_CLIENT_SECRET;
+    if (!settings.paypalSecret && (process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET)) {
+      settings.paypalSecret = process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET;
+    }
+    if (!settings.paypalApiKey && process.env.PAYPAL_API_KEY) {
+      settings.paypalApiKey = process.env.PAYPAL_API_KEY;
+    }
+    if (settings.paypalClientId && (settings.paypalSecret || settings.paypalApiKey)) {
       settings.paypalConnected = true;
     }
     if (process.env.WHATSAPP_BUSINESS_PHONE) {
@@ -501,8 +506,8 @@ app.post("/api/settings", (req, res) => {
 
 // GET PayPal configuration for client checkout
 app.get("/api/paypal/config", (req, res) => {
-  const clientId = process.env.PAYPAL_CLIENT_ID || settings.paypalClientId || "";
-  const hasSecret = Boolean(process.env.PAYPAL_CLIENT_SECRET || process.env.PAYPAL_API_KEY || settings.paypalApiKey);
+  const clientId = settings.paypalClientId || process.env.PAYPAL_CLIENT_ID || "";
+  const hasSecret = Boolean(settings.paypalSecret || settings.paypalApiKey || process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET || process.env.PAYPAL_API_KEY);
   res.json({
     clientId,
     currency: settings.currency || "GBP",
@@ -516,8 +521,8 @@ app.get("/api/paypal/config", (req, res) => {
 app.post("/api/paypal/create-order", async (req, res) => {
   try {
     const { amount, currency = "GBP" } = req.body;
-    const clientId = process.env.PAYPAL_CLIENT_ID || settings.paypalClientId;
-    const clientSecret = process.env.PAYPAL_CLIENT_SECRET || process.env.PAYPAL_API_KEY || settings.paypalApiKey;
+    const clientId = settings.paypalClientId || process.env.PAYPAL_CLIENT_ID;
+    const clientSecret = settings.paypalSecret || settings.paypalApiKey || process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET || process.env.PAYPAL_API_KEY;
 
     if (!clientId || !clientSecret) {
       return res.json({ success: true, orderId: `PP-${Date.now()}` });

@@ -64,7 +64,7 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
   const paypalContainerRef = useRef<HTMLDivElement>(null);
   const buttonsRenderedRef = useRef(false);
 
-  const activeClientId = paypalClientId || 'BAAhhnSf00f00xNNYjsVnZoo0dVIAV76hZPo5AzXLCM1uJA5PU4IyrVb2vdeYVLTVgVbM-n_Gu7lNoWZow';
+  const activeClientId = paypalClientId || 'BAACSYsaVhxLTC72R9E3GpACZi3PcEERxi1K4R_bAIBhC2scX8FTZQvM_08HnqGth_x';
 
   const carrierRates: { [key: string]: { name: string; cost: number; time: string } } = {
     evri: { name: 'Evri Standard Delivery (£2.60)', cost: 2.60, time: '2-3 Working Days' },

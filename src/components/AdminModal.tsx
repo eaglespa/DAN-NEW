@@ -667,11 +667,21 @@ Total: £${o.total.toFixed(2)} [PAID]
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 leading-relaxed">
-                Your direct PayPal API Key is securely stored in backend environment variables. Instant card payments, PayPal UK Express checkout, and automatic buyer protection are enabled.
+                Your direct PayPal API Key and Secret are securely stored and connected to Style &amp; Class London. Direct PayPal gateway checkout, card processing, and automatic balance crediting are fully active.
               </p>
-              <div className="text-[10px] font-mono text-slate-500 flex items-center justify-between">
-                <span>API Key: 2675••••••••••••••••••••••••••••05de</span>
-                <span className="text-emerald-400 font-semibold">Active</span>
+              <div className="space-y-1 text-[10px] font-mono text-slate-400 bg-[#090a0f] p-2 rounded-lg border border-slate-800">
+                <div className="flex items-center justify-between">
+                  <span>API Key (Client ID):</span>
+                  <span className="text-slate-300">BAACSYsa••••••••••••••••••••••••••••th_x</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Secret Key:</span>
+                  <span className="text-slate-300">EOLQmVQs••••••••••••••••••••••••••••Ziu3</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Merchant PayPal Account:</span>
+                  <span className="text-emerald-400 font-semibold">{settings.merchantPayPalEmail || settings.merchantEmail || 'styleandclasslondon@gmail.com'}</span>
+                </div>
               </div>
             </div>
 
