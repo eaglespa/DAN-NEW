@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Plus, Edit, Trash2, Database, MessageCircle, ShoppingBag, Settings, Check, AlertTriangle, RefreshCw, Sparkles, Tag, ExternalLink, QrCode, Download, Truck, MapPin, Printer, ShieldCheck } from 'lucide-react';
+import { X, Plus, Edit, Trash2, Database, MessageCircle, ShoppingBag, Settings, Check, AlertTriangle, RefreshCw, Sparkles, Tag, ExternalLink, QrCode, Download, Truck, MapPin, Printer, ShieldCheck, CreditCard } from 'lucide-react';
 import { Product, Order, StoreSettings } from '../types';
 
 interface AdminModalProps {
@@ -554,6 +554,18 @@ Total: £${o.total.toFixed(2)} [PAID]
                       </div>
 
                       <div className="pt-2 flex flex-wrap justify-end gap-2 border-t border-slate-800/80">
+                        {o.paypalCheckoutUrl && (
+                          <a
+                            href={o.paypalCheckoutUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#ffc439] hover:bg-[#ffb000] text-[#003087] rounded-xl text-xs font-black shadow-sm transition-all cursor-pointer"
+                          >
+                            <CreditCard className="w-3.5 h-3.5" />
+                            <span>Push to PayPal (£{o.total.toFixed(2)})</span>
+                          </a>
+                        )}
+
                         <button
                           type="button"
                           onClick={() => {

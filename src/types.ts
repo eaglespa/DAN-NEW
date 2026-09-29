@@ -87,6 +87,7 @@ export interface Order {
   whatsappNotified: boolean;
   addressQrDataUrl?: string;
   addressQrUrl?: string;
+  paypalCheckoutUrl?: string;
   notes?: string;
 }
 
@@ -96,6 +97,7 @@ export interface StoreSettings {
   merchantWhatsApp: string;
   merchantPhone: string;
   merchantEmail: string;
+  merchantPayPalEmail?: string;
   location: string;
   paypalClientId: string;
   paypalApiKey?: string;

@@ -760,6 +760,17 @@ export default function App() {
         merchantWhatsApp={settings.merchantWhatsApp}
         initialCarrier={checkoutCarrier}
         initialPaymentMethod={checkoutInitialPaymentMethod}
+        onInstantDelete={(ids) => {
+          const toDelete = new Set(ids);
+          setProducts((prev) => prev.filter((p) => !toDelete.has(p.id)));
+          setCurrentProduct((prev) => {
+            if (toDelete.has(prev.id)) {
+              const remaining = products.filter((p) => !toDelete.has(p.id) && p.stock > 0);
+              return remaining[0] || prev;
+            }
+            return prev;
+          });
+        }}
         onOrderSuccess={handleOrderSuccess}
       />
 

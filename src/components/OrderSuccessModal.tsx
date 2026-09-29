@@ -15,7 +15,8 @@ import {
   Check, 
   ShieldCheck,
   Navigation,
-  Printer
+  Printer,
+  CreditCard
 } from 'lucide-react';
 import { Order } from '../types';
 
@@ -429,6 +430,18 @@ ${removedProducts && removedProducts.length > 0 ? `🚨 *INVENTORY AUTOMATION (1
           </div>
 
           <div className="flex items-center gap-2">
+            {order.paypalCheckoutUrl && (
+              <a
+                href={order.paypalCheckoutUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2.5 bg-[#ffc439] hover:bg-[#ffb000] text-[#003087] font-black rounded-xl text-xs transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                <span>Push to PayPal (£{order.total.toFixed(2)})</span>
+              </a>
+            )}
+
             <button
               type="button"
               onClick={() => {

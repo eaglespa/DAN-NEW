@@ -326,7 +326,18 @@ app.post("/api/orders", async (req, res) => {
     const normalizedPaymentMethod = paymentMethod || "paypal_uk";
     const isPaid = normalizedPaymentMethod === "paypal_uk" || normalizedPaymentMethod === "card_uk" || normalizedPaymentMethod === "card";
 
+    // Determine host for absolute product photo URLs and callbacks
+    const host = req.get("host") || "styleandclass.store";
+    const rawProto = req.headers["x-forwarded-proto"];
+    const protocol = (Array.isArray(rawProto) ? rawProto[0] : (typeof rawProto === 'string' ? rawProto.split(',')[0].trim() : req.protocol)) || "https";
+    const baseUrl = `${protocol}://${host}`;
+
     const orderId = `SAC-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const merchantPayPalEmail = settings.merchantPayPalEmail || settings.merchantEmail || "styleandclasslondon@gmail.com";
+    const paypalItemTitle = orderedItems.map((it) => `${it.productTitle} [${it.code || '1-of-1'}]`).join(', ');
+    const paypalCheckoutUrl = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${encodeURIComponent(merchantPayPalEmail)}&item_name=${encodeURIComponent(`Style & Class London: ${paypalItemTitle}`)}&item_number=${encodeURIComponent(orderId)}&amount=${total.toFixed(2)}&currency_code=GBP&no_shipping=2&return=${encodeURIComponent(`${baseUrl}/#label-${orderId}`)}&cancel_return=${encodeURIComponent(baseUrl)}`;
+
     const order: Order = {
       id: orderId,
       createdAt: new Date().toISOString(),
@@ -350,18 +361,13 @@ app.post("/api/orders", async (req, res) => {
       whatsappNotified: false,
       addressQrDataUrl,
       addressQrUrl,
+      paypalCheckoutUrl,
       notes: notes || ""
     };
 
     orders.unshift(order);
     persistProducts();
     persistOrders();
-
-    // Determine host for absolute product photo URLs
-    const host = req.get("host") || "styleandclass.store";
-    const rawProto = req.headers["x-forwarded-proto"];
-    const protocol = (Array.isArray(rawProto) ? rawProto[0] : (typeof rawProto === 'string' ? rawProto.split(',')[0].trim() : req.protocol)) || "https";
-    const baseUrl = `${protocol}://${host}`;
 
     // Structured alert with all 6 required items:
     // 1- Name of the buyer

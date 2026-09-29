@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Printer, ArrowLeft, Download, ExternalLink, QrCode, Check, Copy } from 'lucide-react';
+import { Printer, ArrowLeft, Download, ExternalLink, QrCode, Check, Copy, CreditCard } from 'lucide-react';
 import { Order } from '../types';
 
 interface ShippingLabelViewProps {
@@ -187,6 +187,19 @@ TOTAL: £${activeOrder.total.toFixed(2)}`;
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
             {copied ? 'Copied' : 'Copy Text'}
           </button>
+
+          {activeOrder.paypalCheckoutUrl && (
+            <a
+              href={activeOrder.paypalCheckoutUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black text-[#003087] bg-[#ffc439] hover:bg-[#ffb000] rounded-lg shadow-sm transition-all"
+              title="Push transaction directly to PayPal merchant account"
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              <span>Push to PayPal (£{activeOrder.total.toFixed(2)})</span>
+            </a>
+          )}
 
           <button
             onClick={handlePrint}

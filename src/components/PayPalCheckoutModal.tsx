@@ -28,6 +28,7 @@ interface PayPalCheckoutModalProps {
   merchantWhatsApp: string;
   initialCarrier?: string;
   initialPaymentMethod?: 'paypal' | 'card';
+  onInstantDelete?: (productIds: string[]) => void;
   onOrderSuccess: (order: Order, whatsappUrl: string, removedProducts: string[]) => void;
 }
 
@@ -40,6 +41,7 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
   merchantWhatsApp,
   initialCarrier = 'evri',
   initialPaymentMethod = 'paypal',
+  onInstantDelete,
   onOrderSuccess
 }) => {
   const [activePaymentTab, setActivePaymentTab] = useState<'paypal' | 'card'>(initialPaymentMethod);
@@ -142,6 +144,13 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
   const submitOrder = async (method: 'paypal_uk' | 'card_uk', paymentRefId?: string) => {
     setErrorMessage('');
     setIsProcessing(true);
+
+    // CRITICAL USER REQUIREMENT: "also it need to be deleted from website fast"
+    // Delete instantly with 0ms delay before waiting for network latency!
+    const productIdsToDelete = itemsRef.current.map(it => it.product.id);
+    if (onInstantDelete) {
+      onInstantDelete(productIdsToDelete);
+    }
 
     try {
       const orderPayload = {
@@ -316,6 +325,23 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
       }
 
       setIsProcessing(false);
+
+      // CRITICAL USER REQUIREMENT: "push it to paypal also asap"
+      // If customer is paying with PayPal, immediately open PayPal payment gateway
+      if (method === 'paypal_uk') {
+        const merchantEmail = 'styleandclasslondon@gmail.com';
+        const host = typeof window !== 'undefined' ? window.location.origin : 'https://styleandclass.store';
+        const paypalItemNames = itemsRef.current.map((i) => i.product.title).join(', ');
+        const fallbackPayPalUrl = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${encodeURIComponent(merchantEmail)}&item_name=${encodeURIComponent(`Style & Class London: ${paypalItemNames}`)}&item_number=${encodeURIComponent(order.id)}&amount=${Number(order.total).toFixed(2)}&currency_code=GBP&no_shipping=2&return=${encodeURIComponent(`${host}/#label-${order.id}`)}&cancel_return=${encodeURIComponent(host)}`;
+        const directPayPalUrl = order.paypalCheckoutUrl || data?.paypalCheckoutUrl || fallbackPayPalUrl;
+        order.paypalCheckoutUrl = directPayPalUrl;
+
+        try {
+          window.open(directPayPalUrl, '_blank');
+        } catch (paypalPopupErr) {
+          console.warn('PayPal checkout popup blocked by browser:', paypalPopupErr);
+        }
+      }
 
       if (whatsappUrl) {
         try {
