@@ -13,6 +13,14 @@ const PORT = 3000;
 
 app.use(express.json());
 
+// Handle JSON body parser errors gracefully with JSON responses
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err instanceof SyntaxError && "body" in err) {
+    return res.status(400).json({ success: false, error: "Invalid JSON format in request payload" });
+  }
+  next(err);
+});
+
 // In-memory + persistent disk fallback database
 const DATA_DIR = path.join(process.cwd(), "data");
 const PRODUCTS_FILE = path.join(DATA_DIR, "products.json");
@@ -207,171 +215,186 @@ app.delete("/api/products/:id", (req, res) => {
 
 // POST Place Order with Stock Decrement & Automatic Removal of 1-piece items
 app.post("/api/orders", async (req, res) => {
-  const { items, customer, paymentMethod, notes } = req.body;
-
-  if (!items || !Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ error: "No items in order" });
-  }
-  if (!customer || !customer.fullName || !customer.phone) {
-    return res.status(400).json({ error: "Customer name and phone are required" });
-  }
-
-  let subtotal = 0;
-  const orderedItems: Order["items"] = [];
-  const removedFromStoreProducts: string[] = [];
-
-  // Verify and process stock for each item
-  for (const item of items) {
-    const product = products.find((p) => p.id === item.productId);
-    if (!product) {
-      return res.status(400).json({ error: `Product not found: ${item.productId}` });
-    }
-
-    if (product.stock < item.quantity) {
-      return res.status(400).json({
-        error: `Insufficient stock for "${product.title}". Only ${product.stock} available.`
-      });
-    }
-
-    const itemPrice = product.price;
-    subtotal += itemPrice * item.quantity;
-
-    orderedItems.push({
-      productId: product.id,
-      productTitle: product.title,
-      color: item.color || "Standard",
-      size: item.size || "Standard",
-      quantity: item.quantity,
-      price: itemPrice,
-      image: item.image || product.images[0] || "",
-      code: product.code || "",
-      brand: product.brand || ""
-    });
-
-    // Deduct stock
-    const priorStock = product.stock;
-    product.stock = Math.max(0, product.stock - item.quantity);
-
-    // CRITICAL USER REQUIREMENT:
-    // "also when client buy any item and it's 1 piece only - remove it directly from website (store)"
-    if (priorStock === 1 || product.stock === 0) {
-      product.status = "archived";
-      removedFromStoreProducts.push(product.title);
-      console.log(`[STORE INVENTORY] Product "${product.title}" (${product.code || product.sku}) reached 0 stock (1-piece purchased). Automatically REMOVED from active storefront.`);
-    }
-  }
-
-  // Carrier selection support: Evri (£2.60), InPost (£2.89), Royal Mail (£3.65)
-  const rawCarrier = String(req.body.carrier || 'evri').toLowerCase();
-  let carrierKey = 'evri';
-  if (rawCarrier.includes('royal')) {
-    carrierKey = 'royalmail';
-  } else if (rawCarrier.includes('inpost')) {
-    carrierKey = 'inpost';
-  } else {
-    carrierKey = 'evri';
-  }
-
-  const carrierRates: { [key: string]: { name: string; cost: number; time: string } } = {
-    evri: { name: 'Evri Standard Delivery', cost: 2.60, time: '2-3 Working Days' },
-    inpost: { name: 'InPost Locker / Shop', cost: 2.89, time: '2-3 Working Days' },
-    royalmail: { name: 'Royal Mail 48 Tracked', cost: 3.65, time: '2 Working Days' }
-  };
-  const chosenCarrier = carrierRates[carrierKey] || carrierRates['evri'];
-  const shipping = subtotal >= (settings.freeShippingThreshold || 45) ? 0 : chosenCarrier.cost;
-  const discount = 0;
-  const total = Number((subtotal + shipping - discount).toFixed(2));
-
-  // Generate QR code for buyer address
-  const fullAddress = `${customer.address}, ${customer.city}, ${customer.postcode}, United Kingdom`;
-  const addressQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(fullAddress)}`;
-  
-  let addressQrDataUrl = "";
   try {
-    addressQrDataUrl = await QRCode.toDataURL(fullAddress, {
-      margin: 1,
-      width: 320,
-      color: {
-        dark: "#000000",
-        light: "#ffffff"
+    const { items, customer, paymentMethod, notes, carrier } = req.body || {};
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, error: "No items in order" });
+    }
+    if (!customer || !customer.fullName || !customer.phone) {
+      return res.status(400).json({ success: false, error: "Customer name and phone are required" });
+    }
+
+    let subtotal = 0;
+    const orderedItems: Order["items"] = [];
+    const removedFromStoreProducts: string[] = [];
+
+    // Verify and process stock for each item
+    for (const item of items) {
+      const product = products.find((p) => p.id === item.productId);
+      if (!product) {
+        return res.status(400).json({ success: false, error: `Product not found: ${item.productId}` });
       }
-    });
-  } catch (err) {
-    console.error("QR Code generation error:", err);
-  }
 
-  const normalizedPaymentMethod = paymentMethod || "paypal_uk";
-  const isPaid = normalizedPaymentMethod === "paypal_uk" || normalizedPaymentMethod === "card_uk" || normalizedPaymentMethod === "card";
+      if (product.stock < (Number(item.quantity) || 1)) {
+        return res.status(400).json({
+          success: false,
+          error: `Insufficient stock for "${product.title}". Only ${product.stock} available.`
+        });
+      }
 
-  const orderId = `SAC-${Math.floor(100000 + Math.random() * 900000)}`;
-  const order: Order = {
-    id: orderId,
-    createdAt: new Date().toISOString(),
-    items: orderedItems,
-    customer,
-    carrier: carrierKey,
-    carrierName: chosenCarrier.name,
-    subtotal: Number(subtotal.toFixed(2)),
-    shipping,
-    discount,
-    total,
-    currency: settings.currency || "GBP",
-    paymentMethod: normalizedPaymentMethod,
-    paymentStatus: isPaid ? "completed" : "pending",
-    whatsappNotified: false,
-    addressQrDataUrl,
-    addressQrUrl,
-    notes: notes || ""
-  };
+      const itemPrice = Number(product.price) || 0;
+      const itemQty = Number(item.quantity) || 1;
+      subtotal += itemPrice * itemQty;
 
-  orders.unshift(order);
-  persistProducts();
-  persistOrders();
+      orderedItems.push({
+        productId: product.id,
+        productTitle: product.title,
+        color: item.color || "Standard",
+        size: item.size || "Standard",
+        quantity: itemQty,
+        price: itemPrice,
+        image: item.image || (Array.isArray(product.images) && product.images[0]) || "",
+        code: product.code || "",
+        brand: product.brand || ""
+      });
 
-  // Determine host for absolute product photo URLs
-  const host = req.get("host") || "styleandclass.store";
-  const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
-  const baseUrl = `${protocol}://${host}`;
+      // Deduct stock
+      const priorStock = product.stock;
+      product.stock = Math.max(0, product.stock - itemQty);
 
-  // Structured alert with all 6 required items:
-  // 1- Name of the buyer
-  // 2- Address of the buyer (also generate qr for address)
-  // 3- Buyer phone number
-  // 4- Product name and price
-  // 5- Product photo (1 photo at least)
-  // 6- Shipping company
+      // CRITICAL USER REQUIREMENT:
+      // "also when client buy any item and it's 1 piece only - remove it directly from website (store)"
+      if (priorStock === 1 || product.stock === 0) {
+        product.status = "archived";
+        removedFromStoreProducts.push(product.title);
+        console.log(`[STORE INVENTORY] Product "${product.title}" (${product.code || product.sku}) reached 0 stock (1-piece purchased). Automatically REMOVED from active storefront.`);
+      }
+    }
 
-  const itemsFormatted = orderedItems
-    .map((it, idx) => {
-      const photoUrl = it.image.startsWith("http") ? it.image : `${baseUrl}${it.image}`;
-      return `📦 *ITEM ${idx + 1}:*
+    // Carrier selection support: Evri (£2.60), InPost (£2.89), Royal Mail (£3.65)
+    const rawCarrier = String(carrier || req.body?.carrier || 'evri').toLowerCase();
+    let carrierKey = 'evri';
+    if (rawCarrier.includes('royal')) {
+      carrierKey = 'royalmail';
+    } else if (rawCarrier.includes('inpost')) {
+      carrierKey = 'inpost';
+    } else {
+      carrierKey = 'evri';
+    }
+
+    const carrierRates: { [key: string]: { name: string; cost: number; time: string } } = {
+      evri: { name: 'Evri Standard Delivery', cost: 2.60, time: '2-3 Working Days' },
+      inpost: { name: 'InPost Locker / Shop', cost: 2.89, time: '2-3 Working Days' },
+      royalmail: { name: 'Royal Mail 48 Tracked', cost: 3.65, time: '2 Working Days' }
+    };
+    const chosenCarrier = carrierRates[carrierKey] || carrierRates['evri'];
+    const shipping = subtotal >= (Number(settings.freeShippingThreshold) || 45) ? 0 : chosenCarrier.cost;
+    const discount = 0;
+    const total = Number((subtotal + shipping - discount).toFixed(2));
+
+    // Generate QR code for buyer address
+    const safeAddress = customer.address || '';
+    const safeCity = customer.city || '';
+    const safePostcode = customer.postcode || '';
+    const fullAddress = `${safeAddress}${safeCity ? ', ' + safeCity : ''}${safePostcode ? ', ' + safePostcode : ''}, United Kingdom`;
+    const addressQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(fullAddress)}`;
+    
+    let addressQrDataUrl = "";
+    try {
+      addressQrDataUrl = await QRCode.toDataURL(fullAddress, {
+        margin: 1,
+        width: 320,
+        color: {
+          dark: "#000000",
+          light: "#ffffff"
+        }
+      });
+    } catch (err) {
+      console.error("QR Code generation error:", err);
+    }
+
+    const normalizedPaymentMethod = paymentMethod || "paypal_uk";
+    const isPaid = normalizedPaymentMethod === "paypal_uk" || normalizedPaymentMethod === "card_uk" || normalizedPaymentMethod === "card";
+
+    const orderId = `SAC-${Math.floor(100000 + Math.random() * 900000)}`;
+    const order: Order = {
+      id: orderId,
+      createdAt: new Date().toISOString(),
+      items: orderedItems,
+      customer: {
+        fullName: String(customer.fullName || '').trim(),
+        phone: String(customer.phone || '').trim(),
+        address: safeAddress,
+        city: safeCity,
+        postcode: safePostcode
+      },
+      carrier: carrierKey,
+      carrierName: chosenCarrier.name,
+      subtotal: Number(subtotal.toFixed(2)),
+      shipping,
+      discount,
+      total,
+      currency: settings.currency || "GBP",
+      paymentMethod: normalizedPaymentMethod,
+      paymentStatus: isPaid ? "completed" : "pending",
+      whatsappNotified: false,
+      addressQrDataUrl,
+      addressQrUrl,
+      notes: notes || ""
+    };
+
+    orders.unshift(order);
+    persistProducts();
+    persistOrders();
+
+    // Determine host for absolute product photo URLs
+    const host = req.get("host") || "styleandclass.store";
+    const rawProto = req.headers["x-forwarded-proto"];
+    const protocol = (Array.isArray(rawProto) ? rawProto[0] : (typeof rawProto === 'string' ? rawProto.split(',')[0].trim() : req.protocol)) || "https";
+    const baseUrl = `${protocol}://${host}`;
+
+    // Structured alert with all 6 required items:
+    // 1- Name of the buyer
+    // 2- Address of the buyer (also generate qr for address)
+    // 3- Buyer phone number
+    // 4- Product name and price
+    // 5- Product photo (1 photo at least)
+    // 6- Shipping company
+
+    const itemsFormatted = orderedItems
+      .map((it, idx) => {
+        const img = it.image || '';
+        const photoUrl = img.startsWith("http") ? img : `${baseUrl}${img}`;
+        return `📦 *ITEM ${idx + 1}:*
 • *Product Name:* ${it.productTitle} [${it.code || '1-of-1'}]
 • *Brand:* ${it.brand || 'Designer Vintage'}
 • *Size:* ${it.size} | *Qty:* ${it.quantity}
-• *Price:* £${it.price.toFixed(2)}
+• *Price:* £${Number(it.price).toFixed(2)}
 • *Product Photo:* ${photoUrl}`;
-    })
-    .join("\n\n");
+      })
+      .join("\n\n");
 
-  const photosList = orderedItems
-    .map((it, idx) => {
-      const photoUrl = it.image.startsWith("http") ? it.image : `${baseUrl}${it.image}`;
-      return `📸 *Photo ${idx + 1} (${it.productTitle}):*\n${photoUrl}`;
-    })
-    .join("\n\n");
+    const photosList = orderedItems
+      .map((it, idx) => {
+        const img = it.image || '';
+        const photoUrl = img.startsWith("http") ? img : `${baseUrl}${img}`;
+        return `📸 *Photo ${idx + 1} (${it.productTitle}):*\n${photoUrl}`;
+      })
+      .join("\n\n");
 
-  const cleanCustomerPhone = customer.phone.replace(/[^0-9+]/g, '');
+    const cleanCustomerPhone = String(customer.phone || '').replace(/[^0-9+]/g, '');
 
-  const removalNotice =
-    removedFromStoreProducts.length > 0
-      ? `\n\n🚨 *INVENTORY AUTOMATION (1-PIECE RULE):*\nSold out & automatically removed from active store: ${removedFromStoreProducts.join(", ")}`
-      : "";
+    const removalNotice =
+      removedFromStoreProducts.length > 0
+        ? `\n\n🚨 *INVENTORY AUTOMATION (1-PIECE RULE):*\nSold out & automatically removed from active store: ${removedFromStoreProducts.join(", ")}`
+        : "";
 
-  const paymentLabel = normalizedPaymentMethod === "card_uk" || normalizedPaymentMethod === "card"
-    ? "Debit / Credit Card (UK Secured)"
-    : "PayPal UK";
+    const paymentLabel = normalizedPaymentMethod === "card_uk" || normalizedPaymentMethod === "card"
+      ? "Debit / Credit Card (UK Secured)"
+      : "PayPal UK";
 
-  const whatsappMessage = `🚨 *NEW PAID ORDER ALERT - STYLE & CLASS LONDON* 🚨
+    const whatsappMessage = `🚨 *NEW PAID ORDER ALERT - STYLE & CLASS LONDON* 🚨
 Order ID: #${order.id}
 Status: *PAID ALREADY via ${paymentLabel}* ✅
 Date: ${new Date().toLocaleString("en-GB")}
@@ -408,19 +431,26 @@ ${photosList}
 
 Style And Class London &middot; Sustainable Pre-Loved Luxury`;
 
-  const cleanMerchantPhone = (settings.merchantWhatsApp || "+447591878215").replace(/[^0-9]/g, "");
-  const whatsappUrl = `https://wa.me/${cleanMerchantPhone}?text=${encodeURIComponent(whatsappMessage)}`;
+    const cleanMerchantPhone = String(settings.merchantWhatsApp || "+447591878215").replace(/[^0-9]/g, "");
+    const whatsappUrl = `https://wa.me/${cleanMerchantPhone}?text=${encodeURIComponent(whatsappMessage)}`;
 
-  res.status(201).json({
-    success: true,
-    order,
-    whatsappUrl,
-    whatsappMessage,
-    addressQrUrl,
-    addressQrDataUrl,
-    removedFromStoreProducts,
-    remainingActiveProductsCount: products.filter((p) => p.status === "active" && p.stock > 0).length
-  });
+    res.status(201).json({
+      success: true,
+      order,
+      whatsappUrl,
+      whatsappMessage,
+      addressQrUrl,
+      addressQrDataUrl,
+      removedFromStoreProducts,
+      remainingActiveProductsCount: products.filter((p) => p.status === "active" && p.stock > 0).length
+    });
+  } catch (err: any) {
+    console.error("Order processing error in /api/orders:", err);
+    res.status(500).json({
+      success: false,
+      error: err?.message || "Internal server error occurred while processing order. Please try again."
+    });
+  }
 });
 
 // GET orders (Admin)
@@ -502,6 +532,23 @@ app.get(["/api/download-zip", "/download.zip"], async (req, res) => {
     console.error("Failed to generate ZIP:", err);
     res.status(500).json({ error: "Failed to generate project ZIP archive." });
   }
+});
+
+// Catch-all 404 handler for API routes to never return HTML to API consumers
+app.all("/api/*", (req, res) => {
+  res.status(404).json({ success: false, error: `API route not found: ${req.method} ${req.path}` });
+});
+
+// Central error handler for API endpoints
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("Central API Error Handler caught:", err);
+  if (req.path.startsWith("/api/")) {
+    return res.status(500).json({
+      success: false,
+      error: err?.message || "Internal server error occurred."
+    });
+  }
+  next(err);
 });
 
 // ==================== VITE & STATIC SERVING ====================

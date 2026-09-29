@@ -174,10 +174,18 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
         body: JSON.stringify(orderPayload)
       });
 
-      const data = await response.json();
+      // Safely parse response text to avoid unhandled 'Unexpected end of JSON input'
+      const responseText = await response.text();
+      let data: any = null;
+      try {
+        data = responseText ? JSON.parse(responseText) : null;
+      } catch (parseErr) {
+        console.warn('Non-JSON response from /api/orders:', responseText, parseErr);
+      }
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Checkout failed. Please try again.');
+      if (!response.ok || !data) {
+        const serverError = data?.error || (responseText ? `Server error (${response.status})` : `Server response empty (${response.status}). Please try again or contact via WhatsApp.`);
+        throw new Error(serverError);
       }
 
       setIsProcessing(false);

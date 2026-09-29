@@ -35,8 +35,10 @@ export default function App() {
   const [activePage, setActivePage] = useState<'home' | 'collections' | 'contact' | 'detail'>('home');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  // Currently viewed product
-  const [currentProduct, setCurrentProduct] = useState<Product>(INITIAL_PRODUCTS[0]);
+  // Currently viewed product (prefer active in-stock item)
+  const [currentProduct, setCurrentProduct] = useState<Product>(
+    INITIAL_PRODUCTS.find((p) => p.status === 'active' && p.stock > 0) || INITIAL_PRODUCTS[0]
+  );
   const [selectedColor, setSelectedColor] = useState<string>(INITIAL_PRODUCTS[0].colors[0]?.name || 'Standard');
   const [selectedSize, setSelectedSize] = useState<string>(INITIAL_PRODUCTS[0].sizes[0] || 'Standard');
   const [quantity, setQuantity] = useState<number>(1);
@@ -73,31 +75,56 @@ export default function App() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [inventoryAlert, setInventoryAlert] = useState<string | null>(null);
 
-  // Load data from Backend API
+  // Load data from Backend API safely
   const refreshData = useCallback(async () => {
     try {
       const resProducts = await fetch('/api/products?all=true');
       if (resProducts.ok) {
-        const prodData: Product[] = await resProducts.json();
-        if (Array.isArray(prodData) && prodData.length > 0) {
-          setProducts(prodData);
-          setCurrentProduct((prev) => {
-            const match = prodData.find((p) => p.id === prev.id);
-            return match || prodData.find(p => p.status === 'active') || prodData[0];
-          });
+        const text = await resProducts.text();
+        if (text) {
+          try {
+            const prodData: Product[] = JSON.parse(text);
+            if (Array.isArray(prodData) && prodData.length > 0) {
+              setProducts(prodData);
+              setCurrentProduct((prev) => {
+                const match = prodData.find((p) => p.id === prev.id && p.status === 'active' && p.stock > 0);
+                return match || prodData.find(p => p.status === 'active' && p.stock > 0) || prodData[0];
+              });
+            }
+          } catch (jsonErr) {
+            console.warn('Failed to parse products JSON:', jsonErr);
+          }
         }
       }
 
       const resOrders = await fetch('/api/orders');
       if (resOrders.ok) {
-        const orderData = await resOrders.json();
-        setOrders(orderData);
+        const text = await resOrders.text();
+        if (text) {
+          try {
+            const orderData = JSON.parse(text);
+            if (Array.isArray(orderData)) {
+              setOrders(orderData);
+            }
+          } catch (jsonErr) {
+            console.warn('Failed to parse orders JSON:', jsonErr);
+          }
+        }
       }
 
       const resSettings = await fetch('/api/settings');
       if (resSettings.ok) {
-        const setData = await resSettings.json();
-        setSettings(setData);
+        const text = await resSettings.text();
+        if (text) {
+          try {
+            const setData = JSON.parse(text);
+            if (setData && typeof setData === 'object') {
+              setSettings(setData);
+            }
+          } catch (jsonErr) {
+            console.warn('Failed to parse settings JSON:', jsonErr);
+          }
+        }
       }
     } catch (e) {
       console.warn('Backend API fetch error (using fallback state):', e);
@@ -177,7 +204,7 @@ export default function App() {
   // Cart Handlers
   const handleAddToCart = () => {
     if (currentProduct.stock <= 0) {
-      alert('Sorry, this product is currently sold out.');
+      setInventoryAlert('Sorry, this 1-of-1 piece is currently sold out.');
       return;
     }
 
@@ -355,8 +382,17 @@ export default function App() {
         body: JSON.stringify(newSettings)
       });
       if (res.ok) {
-        const data = await res.json();
-        setSettings(data.settings);
+        const text = await res.text();
+        if (text) {
+          try {
+            const data = JSON.parse(text);
+            if (data && data.settings) {
+              setSettings(data.settings);
+            }
+          } catch (jsonErr) {
+            console.warn('Failed to parse updated settings JSON:', jsonErr);
+          }
+        }
       }
     } catch (e) {
       console.error('Error updating settings:', e);
