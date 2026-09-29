@@ -6,6 +6,8 @@
   "merchantEmail": "styleandclasslondon@gmail.com",
   "location": "London, United Kingdom",
   "paypalClientId": "BAAhhnSf00f00xNNYjsVnZoo0dVIAV76hZPo5AzXLCM1uJA5PU4IyrVb2vdeYVLTVgVbM-n_Gu7lNoWZow",
+  "paypalApiKey": "2675bb2d72566b54dc9fefd3e6b7bef177b3b1f0ccb866608290119b57a805de",
+  "paypalConnected": true,
   "currency": "GBP",
   "currencySymbol": "£",
   "freeShippingThreshold": 45.00,

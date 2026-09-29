@@ -98,6 +98,8 @@ export interface StoreSettings {
   merchantEmail: string;
   location: string;
   paypalClientId: string;
+  paypalApiKey?: string;
+  paypalConnected?: boolean;
   currency: string;
   currencySymbol: string;
   freeShippingThreshold: number;

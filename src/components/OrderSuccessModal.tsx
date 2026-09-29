@@ -14,7 +14,8 @@ import {
   Package, 
   Check, 
   ShieldCheck,
-  Navigation
+  Navigation,
+  Printer
 } from 'lucide-react';
 import { Order } from '../types';
 
@@ -24,6 +25,7 @@ interface OrderSuccessModalProps {
   removedProducts: string[];
   onClose: () => void;
   currencySymbol: string;
+  onOpenLabel?: (order: Order) => void;
 }
 
 export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
@@ -31,7 +33,8 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
   whatsappUrl,
   removedProducts,
   onClose,
-  currencySymbol
+  currencySymbol,
+  onOpenLabel
 }) => {
   const [copied, setCopied] = useState(false);
   const [showQrExpanded, setShowQrExpanded] = useState(false);
@@ -426,6 +429,21 @@ ${removedProducts && removedProducts.length > 0 ? `🚨 *INVENTORY AUTOMATION (1
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (onOpenLabel) {
+                  onOpenLabel(order);
+                } else {
+                  window.location.hash = `#label-${order.id}`;
+                }
+              }}
+              className="px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white font-bold rounded-xl text-xs transition-all shadow-md flex items-center gap-1.5 cursor-pointer border border-neutral-700"
+            >
+              <Printer className="w-3.5 h-3.5 text-[#d4a853]" />
+              <span>Print 4×6 Label</span>
+            </button>
+
             <button
               type="button"
               onClick={onClose}

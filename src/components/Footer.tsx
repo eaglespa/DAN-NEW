@@ -172,6 +172,15 @@ export const Footer: React.FC<FooterProps> = ({
                   Contact &amp; Concierge
                 </button>
               </li>
+              <li>
+                <a
+                  href="#label-SAC-671132"
+                  className="hover:text-[#d4a853] transition-colors flex items-center gap-1.5 text-neutral-300"
+                >
+                  <span className="text-[#d4a853]">🖨️</span>
+                  <span>Print 4×6 Shipping Label</span>
+                </a>
+              </li>
             </ul>
           </div>
 

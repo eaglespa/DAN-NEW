@@ -21,6 +21,7 @@ import { FloatingWhatsAppButton } from './components/FloatingWhatsAppButton';
 import { ScrollToTopButton } from './components/ScrollToTopButton';
 import { RelatedProducts } from './components/RelatedProducts';
 import { Footer } from './components/Footer';
+import { ShippingLabelView } from './components/ShippingLabelView';
 import { Product, CartItem, Order, StoreSettings } from './types';
 import { INITIAL_PRODUCTS, INITIAL_SETTINGS } from './data/initialProducts';
 import { AlertCircle, CheckCircle2, ChevronRight, Home } from 'lucide-react';
@@ -32,8 +33,9 @@ export default function App() {
   const [currency, setCurrency] = useState<string>('GBP');
 
   // Page Routing & Navigation
-  const [activePage, setActivePage] = useState<'home' | 'collections' | 'contact' | 'detail'>('home');
+  const [activePage, setActivePage] = useState<'home' | 'collections' | 'contact' | 'detail' | 'label'>('home');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedLabelOrder, setSelectedLabelOrder] = useState<Order | null>(null);
 
   // Currently viewed product (prefer active in-stock item)
   const [currentProduct, setCurrentProduct] = useState<Product>(
@@ -134,6 +136,35 @@ export default function App() {
   useEffect(() => {
     refreshData();
   }, [refreshData]);
+
+  // URL Hash & Query routing for thermal shipping label
+  useEffect(() => {
+    const handleUrlRoute = () => {
+      const hash = window.location.hash;
+      const search = window.location.search;
+      const params = new URLSearchParams(search);
+      const labelParam = params.get('label') || params.get('order');
+
+      if (hash.startsWith('#label') || labelParam || window.location.pathname.includes('/label')) {
+        const rawId = (labelParam || hash.replace('#label-', '').replace('#label/', '').replace('#label', '')).trim();
+        setActivePage('label');
+        if (rawId && orders.length > 0) {
+          const match = orders.find(
+            (o) => o.id.toLowerCase() === rawId.toLowerCase() || o.id.toLowerCase() === `sac-${rawId.toLowerCase()}`
+          );
+          if (match) setSelectedLabelOrder(match);
+        }
+      }
+    };
+
+    handleUrlRoute();
+    window.addEventListener('hashchange', handleUrlRoute);
+    window.addEventListener('popstate', handleUrlRoute);
+    return () => {
+      window.removeEventListener('hashchange', handleUrlRoute);
+      window.removeEventListener('popstate', handleUrlRoute);
+    };
+  }, [orders]);
 
   // Navigation Handler
   const handleNavigate = (page: 'home' | 'collections' | 'contact' | 'detail', category?: string) => {
@@ -305,7 +336,7 @@ export default function App() {
     window.open(url, '_blank');
   };
 
-  // Order Completed
+  // Order Completed - Permanently delete purchased items from website
   const handleOrderSuccess = async (
     order: Order,
     whatsappUrl: string,
@@ -315,9 +346,24 @@ export default function App() {
     setIsCartOpen(false);
     setCart([]);
 
+    // Get purchased product IDs
+    const purchasedIds = new Set(order.items.map((it) => it.productId));
+
+    // Instantly remove bought items from website products state
+    setProducts((prev) => prev.filter((p) => !purchasedIds.has(p.id)));
+
+    // If the product currently on detail view was purchased, switch to next available piece
+    setCurrentProduct((prev) => {
+      if (purchasedIds.has(prev.id)) {
+        const remaining = products.filter((p) => !purchasedIds.has(p.id) && p.stock > 0);
+        return remaining[0] || prev;
+      }
+      return prev;
+    });
+
     if (removedProducts && removedProducts.length > 0) {
       setInventoryAlert(
-        `Automated Store Notice: "${removedProducts.join(', ')}" was purchased (final 1 piece in stock) and has been automatically archived from the storefront!`
+        `✓ "${removedProducts.join(', ')}" has been purchased & permanently deleted from the website!`
       );
     }
 
@@ -402,6 +448,21 @@ export default function App() {
   // Active products for public storefront
   const activeProducts = products.filter((p) => p.status === 'active' && p.stock > 0);
   const isCurrentProductSoldOut = currentProduct.stock <= 0 || currentProduct.status === 'archived';
+
+  // Active label view takes over full screen for distraction-free 4x6 printing
+  if (activePage === 'label') {
+    return (
+      <ShippingLabelView
+        order={selectedLabelOrder || orders[0] || null}
+        ordersList={orders}
+        onSelectOrder={(ord) => setSelectedLabelOrder(ord)}
+        onBack={() => {
+          setActivePage('home');
+          window.location.hash = '';
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#07080b] text-slate-100 flex flex-col font-sans antialiased selection:bg-[#d4a853] selection:text-black">
@@ -709,6 +770,11 @@ export default function App() {
         removedProducts={successOrderData?.removedProducts || []}
         onClose={() => setSuccessOrderData(null)}
         currencySymbol={settings.currencySymbol || '£'}
+        onOpenLabel={(ord) => {
+          setSelectedLabelOrder(ord);
+          setActivePage('label');
+          window.location.hash = `#label-${ord.id}`;
+        }}
       />
 
       {/* Size Guide Modal */}
@@ -732,6 +798,12 @@ export default function App() {
         onUpdateSettings={handleUpdateSettings}
         onRefreshData={refreshData}
         currencySymbol={settings.currencySymbol || '£'}
+        onOpenLabel={(ord) => {
+          setIsAdminOpen(false);
+          setSelectedLabelOrder(ord);
+          setActivePage('label');
+          window.location.hash = `#label-${ord.id}`;
+        }}
       />
 
       {/* Security Gate / Password Protection Modal for Store Brain */}

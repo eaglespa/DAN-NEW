@@ -211,9 +211,7 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
 
         const clientRemoved: string[] = [];
         itemsRef.current.forEach((it) => {
-          if (it.product.stock <= it.quantity || it.product.stock === 1) {
-            clientRemoved.push(it.product.title);
-          }
+          clientRemoved.push(it.product.title);
         });
 
         order = {
@@ -299,6 +297,9 @@ ${photosList}
 🚚 *${selectedCarrier.name}* (£${order.shipping === 0 ? 'FREE' : order.shipping.toFixed(2)})
 ⏱️ Tracked Delivery: ${selectedCarrier.deliveryEstimate}
 ----------------------------------------
+
+🏷️ *PRINT 4×6 THERMAL SHIPPING LABEL:*
+${host}/#label-${order.id}
 
 Style And Class London · Sustainable Pre-Loved Luxury`;
 
