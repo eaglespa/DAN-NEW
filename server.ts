@@ -125,23 +125,70 @@ function persistSettings() {
   }
 }
 
+// ==================== SEO & SITEMAP ROUTES ====================
+
+app.get("/sitemap.xml", (req, res) => {
+  const baseUrl = "https://styleandclass.store";
+  const activeProducts = products.filter((p) => p.status === "active" && p.stock > 0);
+  const now = new Date().toISOString().split("T")[0];
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n`;
+  xml += `  <url><loc>${baseUrl}/</loc><lastmod>${now}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>\n`;
+  xml += `  <url><loc>${baseUrl}/#collections</loc><lastmod>${now}</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>\n`;
+  xml += `  <url><loc>${baseUrl}/#collections/women</loc><lastmod>${now}</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>\n`;
+  xml += `  <url><loc>${baseUrl}/#collections/men</loc><lastmod>${now}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>\n`;
+  xml += `  <url><loc>${baseUrl}/#collections/kids</loc><lastmod>${now}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>\n`;
+  xml += `  <url><loc>${baseUrl}/#collections/accessories</loc><lastmod>${now}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>\n`;
+  xml += `  <url><loc>${baseUrl}/#contact</loc><lastmod>${now}</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>\n`;
+  xml += `  <url><loc>${baseUrl}/#terms</loc><lastmod>${now}</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>\n`;
+
+  activeProducts.forEach((p) => {
+    const safeTitle = (p.title || 'Pre-Loved Fashion').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    xml += `  <url>\n`;
+    xml += `    <loc>${baseUrl}/#product-${p.id}</loc>\n`;
+    xml += `    <lastmod>${now}</lastmod>\n`;
+    xml += `    <changefreq>daily</changefreq>\n`;
+    xml += `    <priority>0.8</priority>\n`;
+    if (p.images && p.images[0]) {
+      const imgUrl = p.images[0].startsWith('http') ? p.images[0] : `${baseUrl}${p.images[0]}`;
+      xml += `    <image:image><image:loc>${imgUrl}</image:loc><image:title>${safeTitle}</image:title></image:image>\n`;
+    }
+    xml += `  </url>\n`;
+  });
+
+  xml += `</urlset>`;
+  res.header("Content-Type", "application/xml; charset=utf-8");
+  res.send(xml);
+});
+
 // ==================== API ROUTES ====================
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// GET products (filtered by active for store; or ?all=true for admin)
+// GET products (filtered by active for store; or ?all=true for admin; supports ?limit=&page=&category=)
 app.get("/api/products", (req, res) => {
   const showAll = req.query.all === "true";
-  if (showAll) {
-    return res.json(products);
+  let result = showAll ? products : products.filter((p) => p.status === "active" && p.stock > 0);
+
+  const category = typeof req.query.category === 'string' ? req.query.category.toLowerCase() : '';
+  if (category && category !== 'all') {
+    result = result.filter(p => p.collection?.toLowerCase() === category || p.category?.toLowerCase() === category);
   }
-  // Storefront view: only active items with stock > 0
-  const activeProducts = products.filter(
-    (p) => p.status === "active" && p.stock > 0
-  );
-  res.json(activeProducts);
+
+  const search = typeof req.query.search === 'string' ? req.query.search.toLowerCase().trim() : '';
+  if (search) {
+    result = result.filter(p => 
+      p.title.toLowerCase().includes(search) || 
+      p.brand?.toLowerCase().includes(search) || 
+      p.code?.toLowerCase().includes(search) ||
+      p.category?.toLowerCase().includes(search)
+    );
+  }
+
+  res.json(result);
 });
 
 // GET single product by id or slug
@@ -341,7 +388,31 @@ app.post("/api/orders", async (req, res) => {
 
     const merchantPayPalEmail = settings.merchantPayPalEmail || settings.merchantEmail || "styleandclasslondon@gmail.com";
     const paypalItemTitle = orderedItems.map((it) => `${it.productTitle} [${it.code || '1-of-1'}]`).join(', ');
-    const paypalCheckoutUrl = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${encodeURIComponent(merchantPayPalEmail)}&item_name=${encodeURIComponent(`Style & Class London: ${paypalItemTitle}`)}&item_number=${encodeURIComponent(orderId)}&amount=${total.toFixed(2)}&currency_code=GBP&no_shipping=2&return=${encodeURIComponent(`${baseUrl}/#label-${orderId}`)}&cancel_return=${encodeURIComponent(baseUrl)}`;
+    const nameParts = String(customer.fullName || '').trim().split(' ');
+    const firstName = nameParts[0] || 'Customer';
+    const lastName = nameParts.slice(1).join(' ') || 'London';
+    const isCard = normalizedPaymentMethod === 'card_uk';
+
+    const paypalParams = new URLSearchParams({
+      cmd: '_xclick',
+      business: merchantPayPalEmail,
+      item_name: `Style & Class London: ${paypalItemTitle}`,
+      item_number: orderId,
+      amount: total.toFixed(2),
+      currency_code: 'GBP',
+      first_name: firstName,
+      last_name: lastName,
+      address1: safeAddress,
+      city: safeCity,
+      zip: safePostcode,
+      night_phone_b: String(customer.phone || '').trim(),
+      country: 'GB',
+      no_shipping: '2',
+      landing_page: isCard ? 'billing' : 'login',
+      return: `${baseUrl}/#label-${orderId}`,
+      cancel_return: baseUrl
+    });
+    const paypalCheckoutUrl = `https://www.paypal.com/cgi-bin/webscr?${paypalParams.toString()}`;
 
     const order: Order = {
       id: orderId,

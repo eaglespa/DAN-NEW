@@ -44,40 +44,96 @@ export const LegalModal: React.FC<LegalModalProps> = ({ policyType, onClose }) =
         <div className="p-6 overflow-y-auto space-y-6 text-sm text-slate-300 leading-relaxed">
           {policyType === 'terms' && (
             <div className="space-y-4">
-              <div className="p-4 bg-[#181b28] rounded-xl border border-slate-800 text-xs text-amber-200/90 leading-relaxed">
-                These are our terms and conditions for the use of our website <strong>STYLE AND CLASS</strong> and the purchase of products through the website.
+              <div className="p-4 bg-[#181b28] rounded-xl border border-slate-800 text-xs text-amber-200/90 leading-relaxed space-y-2">
+                <p>
+                  These are our terms and conditions for the use of our website <strong>STYLE AND CLASS</strong> and the purchase of products through the website.
+                </p>
+                <p className="text-slate-300">
+                  If you have any queries about these terms, please contact us using the contact form.
+                </p>
               </div>
 
-              <h3 className="text-base font-bold text-white">1. General Terms of Use</h3>
-              <p>
-                The terms and conditions herein together with any notices or conditions on other areas of this website will all together govern use by customers of this website. You should note that Style And Class may at any time make changes to or remove part of this website without any liability to customers for such changes. Style And Class reserves the right to change these terms and conditions in the future without specifically notifying customers, and continued use of the website or placing of orders after such changes shall be deemed to be acknowledgement and acceptance thereof.
-              </p>
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider text-[#d4a853]">1. General Terms of Use</h3>
+                <p>
+                  The terms and conditions herein together with any notices or conditions on other areas of this website will all together govern use by customers of this website. You should note that Style and Class may at any time make changes to or remove part of this website without any liability to customers for such changes. Style and Class reserves the right to change these terms and conditions in the future without specifically notifying customers and continued use of the website or placing of orders after such changes shall be deemed to be acknowledgement and acceptance thereof.
+                </p>
+              </div>
 
-              <h3 className="text-base font-bold text-white">2. Pre-Loved &amp; 1-of-1 Inventory Policy</h3>
-              <p>
-                Unless otherwise explicitly marked as &quot;New Without Tags&quot;, items sold by Style And Class are authentic pre-loved, vintage, or pre-owned garments and accessories. Each item is unique (1-of-1). Once an order is confirmed, that unique item is immediately removed from the active store catalog and reserved for the purchasing customer.
-              </p>
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider text-[#d4a853]">2. Contract Formation</h3>
+                <p>
+                  A contract will only come into existence between you the customer and us once your order has been processed and dispatched.
+                </p>
+              </div>
 
-              <h3 className="text-base font-bold text-white">3. Condition Grading &amp; Authenticity</h3>
-              <p>
-                Every garment is hand-inspected, steam-pressed, and graded by our London team. Condition grades are defined as:
-              </p>
-              <ul className="list-disc pl-5 space-y-1 text-slate-300 text-xs">
-                <li><strong>New Without Tags:</strong> Brand new, unworn, pristine condition with zero signs of wear.</li>
-                <li><strong>Excellent:</strong> Near flawless, very lightly worn, no visible tears, marks, or fabric pilling.</li>
-                <li><strong>Very Good:</strong> Well cared for pre-owned piece with minimal natural signs of gentle wear.</li>
-                <li><strong>Good:</strong> Clean, wearable vintage piece with minor aesthetic character.</li>
-              </ul>
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider text-[#d4a853]">3. Customer Eligibility &amp; Warranties</h3>
+                <p>
+                  When you as a customer place an order via this website, you warrant by placing the order that:
+                </p>
+                <ul className="list-disc pl-5 space-y-1.5 text-slate-300 text-xs">
+                  <li>You are not a minor or otherwise legally incapable of entering into a binding contract.</li>
+                  <li>The personal details which you give us on registration are fully complete and accurate.</li>
+                  <li>You are not using a false name or the name of any other person or body which you are not authorised to use.</li>
+                </ul>
+              </div>
 
-              <h3 className="text-base font-bold text-white">4. Pricing, Payments &amp; Delivery</h3>
-              <p>
-                All prices are stated in British Pounds Sterling (GBP, £) and include UK mainland delivery options. Payments can be completed safely via PayPal UK with full Buyer Protection, card processing, or direct WhatsApp concierge arrangement. Orders are dispatched within 24 hours via tracked carriers (Evri, InPost, or Royal Mail).
-              </p>
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider text-[#d4a853]">4. Placement of an Order</h3>
+                <p>
+                  When you place your order you are doing so in acceptance of these terms and conditions and it is important that you have read them before you go ahead and order.
+                </p>
+              </div>
 
-              <h3 className="text-base font-bold text-white">5. 7-Day UK Returns</h3>
-              <p>
-                If an item does not fit or does not meet your expectations, you may return it within 7 days of delivery in its original, unworn state with our security tag attached. Return postage is covered by the customer unless the item was misrepresented.
-              </p>
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider text-[#d4a853]">5. Cancelling an Order</h3>
+                <p>
+                  As a customer, you are free to cancel an order within 7 days and will be refunded amount of your order to their account the order originally was paid from.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider text-[#d4a853]">6. Acceptance of an Order</h3>
+                <p>
+                  When an order is placed you will get an order confirmation sent to the email address you provided during checkout, containing information about order content, prices.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider text-[#d4a853]">7. Delivery</h3>
+                <p>
+                  You as a buyer are free to choose from mentioned and at the time relevant delivery option(s). Style and Class assumes no responsibility for damages during transport or damages caused from any delays beyond its control.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider text-[#d4a853]">8. Returns Policy</h3>
+                <p>
+                  Style and Class accepts returns within 7 days if products are not used, changed, washed or otherwise manipulated. Products need to be returned in original packaging. No products may be returned to Style and Class without the prior written consent of Style And Class Fashion and are subject to a return charge.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider text-[#d4a853]">9. Liability</h3>
+                <p>
+                  We try to have the information on this website as accurate as possible but we make no warranties, whether express or implied, regarding its accuracy. We also do not make any warranties regarding any matters relating to the use of this website and it is a matter for you to ensure that your own equipment is protected from viruses or other external factors.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider text-[#d4a853]">10. Consumer Rights &amp; Statutory Protection</h3>
+                <p>
+                  Your rights are protected by the Sale of Goods and Supply of Services Act, 1980, and also the Consumer Protection Act, 2007, where you are a consumer. Nothing in this website shall affect your rights under the applicable law.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider text-[#d4a853]">11. Severance</h3>
+                <p>
+                  If any of these terms and conditions shall prove to be void, unlawful, or unenforceable for any reason then such term or condition shall be deemed to be severed from the remaining terms and conditions which shall remain valid and enforceable.
+                </p>
+              </div>
             </div>
           )}
 

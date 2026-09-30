@@ -77,8 +77,8 @@ export const ContactView: React.FC<ContactViewProps> = ({ settings, onNavigateHo
                 <Phone className="w-5 h-5 text-[#d4a853] shrink-0 mt-0.5" />
                 <div>
                   <span className="text-[11px] uppercase font-bold text-slate-400 block">Phone Support</span>
-                  <a href={`tel:${settings.merchantPhone || '+4407591878215'}`} className="text-white hover:text-[#d4a853] transition-colors font-mono font-medium">
-                    {settings.merchantPhone || '+44 07591878215'}
+                  <a href={`tel:${settings.merchantPhone || '+447591878215'}`} className="text-white hover:text-[#d4a853] transition-colors font-mono font-medium">
+                    {settings.merchantPhone || '+44 7591 878215'}
                   </a>
                 </div>
               </div>

@@ -154,6 +154,12 @@ export default function App() {
           );
           if (match) setSelectedLabelOrder(match);
         }
+      } else if (hash === '#terms' || hash === '#terms-and-conditions' || hash === '#terms-conditions') {
+        setLegalPolicy('terms');
+      } else if (hash === '#privacy' || hash === '#privacy-policy') {
+        setLegalPolicy('privacy');
+      } else if (hash === '#cookie' || hash === '#cookie-policy' || hash === '#cookies') {
+        setLegalPolicy('cookie');
       }
     };
 

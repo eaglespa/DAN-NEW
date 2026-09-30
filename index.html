@@ -7,8 +7,12 @@
     <meta name="description" content="Shop curated pre-loved &amp; second-hand fashion at Style And Class. Sustainable dresses, blouses, menswear, kids' wear &amp; accessories with fast UK delivery. Affordable luxury, one-of-a-kind finds." />
     <meta name="keywords" content="second hand clothes UK, pre-loved fashion, sustainable clothing, vintage fashion UK, thrift store online, affordable designer clothes, second hand dresses, pre-owned menswear, Style And Class" />
     <meta name="author" content="Style And Class" />
-    <meta name="geo.region" content="GB" />
-    <meta name="geo.placename" content="United Kingdom" />
+    <meta name="geo.region" content="GB-LND" />
+    <meta name="geo.placename" content="London, United Kingdom" />
+    <meta name="geo.position" content="51.5074;-0.1278" />
+    <meta name="ICBM" content="51.5074, -0.1278" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <link rel="canonical" href="https://styleandclass.store/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     
     <!-- Open Graph / Facebook -->
@@ -42,24 +46,50 @@
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "ClothingStore",
-      "name": "Style And Class",
-      "description": "Curated second-hand and pre-loved fashion shop offering sustainable, affordable luxury clothing for women, men, kids and accessories with UK delivery.",
-      "url": "https://styleandclass.store/",
-      "email": "styleandclasslondon@gmail.com",
-      "telephone": "+447591878215",
-      "priceRange": "£–££",
-      "currenciesAccepted": "GBP",
-      "paymentAccepted": "Credit Card, Debit Card, PayPal",
-      "address": {
-        "@type": "PostalAddress",
-        "addressCountry": "GB",
-        "addressRegion": "United Kingdom"
-      },
-      "sameAs": [
-        "https://www.instagram.com/danmark.uk",
-        "https://www.tiktok.com/@danmark.fashion5",
-        "https://www.facebook.com/share/1DV7Qjem6m/"
+      "@graph": [
+        {
+          "@type": "ClothingStore",
+          "@id": "https://styleandclass.store/#store",
+          "name": "Style And Class",
+          "alternateName": "Style & Class London",
+          "description": "London curated pre-loved & vintage boutique offering sustainable 1-of-1 women's, men's, kids' fashion and accessories dispatched across the UK.",
+          "url": "https://styleandclass.store/",
+          "email": "styleandclasslondon@gmail.com",
+          "telephone": "+447591878215",
+          "priceRange": "£–££",
+          "currenciesAccepted": "GBP",
+          "paymentAccepted": "Credit Card, Debit Card, PayPal",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "London",
+            "addressRegion": "Greater London",
+            "addressCountry": "GB"
+          },
+          "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": 51.5074,
+            "longitude": -0.1278
+          },
+          "sameAs": [
+            "https://www.instagram.com/danmark.uk",
+            "https://www.tiktok.com/@danmark.fashion5",
+            "https://www.facebook.com/share/1DV7Qjem6m/"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://styleandclass.store/#website",
+          "url": "https://styleandclass.store/",
+          "name": "Style And Class London",
+          "publisher": {
+            "@id": "https://styleandclass.store/#store"
+          },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://styleandclass.store/?search={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        }
       ]
     }
     </script>

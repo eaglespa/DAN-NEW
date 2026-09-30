@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Trash2, ShoppingBag, ArrowRight, ShieldCheck, Truck, MessageCircle, AlertTriangle, CreditCard } from 'lucide-react';
+import { X, Trash2, ShoppingBag, ArrowRight, ShieldCheck, Truck, AlertTriangle, CreditCard } from 'lucide-react';
 import { CartItem } from '../types';
 
 interface CartDrawerProps {
@@ -10,7 +10,7 @@ interface CartDrawerProps {
   onRemoveItem: (index: number) => void;
   onCheckoutPayPal: (carrier?: string) => void;
   onCheckoutCard?: (carrier?: string) => void;
-  onCheckoutWhatsApp: (carrier?: string) => void;
+  onCheckoutWhatsApp?: (carrier?: string) => void;
   currencySymbol: string;
 }
 
@@ -253,17 +253,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   <span className="text-[11px] font-sans text-slate-800 ml-1">/ Pay in 3</span>
                 </button>
               </div>
-
-              {/* WhatsApp Checkout Option */}
-              <button
-                id="cart-checkout-whatsapp-btn"
-                type="button"
-                onClick={() => onCheckoutWhatsApp(selectedCarrier)}
-                className="w-full py-2.5 px-4 rounded-xl bg-[#25D366] hover:bg-[#20ba5a] text-black font-extrabold text-xs transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
-              >
-                <MessageCircle className="w-4 h-4 fill-black text-black" />
-                <span>Order Bag directly on WhatsApp (+44 7591 878215)</span>
-              </button>
 
               <div className="flex items-center justify-center gap-3 pt-1 text-[11px] text-slate-500">
                 <div className="flex items-center gap-1">

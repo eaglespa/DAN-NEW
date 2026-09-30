@@ -55,12 +55,6 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
   const [errorMessage, setErrorMessage] = useState('');
   const [sdkLoaded, setSdkLoaded] = useState(false);
 
-  // Card details state
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvc, setCardCvc] = useState('');
-  const [cardName, setCardName] = useState('');
-
   const paypalContainerRef = useRef<HTMLDivElement>(null);
   const buttonsRenderedRef = useRef(false);
 
@@ -326,21 +320,43 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
 
       setIsProcessing(false);
 
-      // CRITICAL USER REQUIREMENT: "push it to paypal also asap"
-      // If customer is paying with PayPal, immediately open PayPal payment gateway
-      if (method === 'paypal_uk') {
-        const merchantEmail = 'styleandclasslondon@gmail.com';
-        const host = typeof window !== 'undefined' ? window.location.origin : 'https://styleandclass.store';
-        const paypalItemNames = itemsRef.current.map((i) => i.product.title).join(', ');
-        const fallbackPayPalUrl = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${encodeURIComponent(merchantEmail)}&item_name=${encodeURIComponent(`Style & Class London: ${paypalItemNames}`)}&item_number=${encodeURIComponent(order.id)}&amount=${Number(order.total).toFixed(2)}&currency_code=GBP&no_shipping=2&return=${encodeURIComponent(`${host}/#label-${order.id}`)}&cancel_return=${encodeURIComponent(host)}`;
-        const directPayPalUrl = order.paypalCheckoutUrl || data?.paypalCheckoutUrl || fallbackPayPalUrl;
-        order.paypalCheckoutUrl = directPayPalUrl;
+      // CRITICAL USER REQUIREMENT: Send transaction details to PayPal for BOTH PayPal and Debit/Credit Card
+      const merchantEmail = 'styleandclasslondon@gmail.com';
+      const host = typeof window !== 'undefined' ? window.location.origin : 'https://styleandclass.store';
+      const paypalItemNames = itemsRef.current.map((i) => `${i.product.title} [${i.product.code || '1-of-1'}]`).join(', ');
 
-        try {
-          window.open(directPayPalUrl, '_blank');
-        } catch (paypalPopupErr) {
-          console.warn('PayPal checkout popup blocked by browser:', paypalPopupErr);
-        }
+      const nameParts = (customer.fullName || '').trim().split(' ');
+      const firstName = nameParts[0] || 'Customer';
+      const lastName = nameParts.slice(1).join(' ') || 'London';
+
+      const paypalParams = new URLSearchParams({
+        cmd: '_xclick',
+        business: merchantEmail,
+        item_name: `Style & Class London: ${paypalItemNames}`,
+        item_number: order.id,
+        amount: Number(order.total).toFixed(2),
+        currency_code: 'GBP',
+        first_name: firstName,
+        last_name: lastName,
+        address1: customer.address,
+        city: customer.city,
+        zip: customer.postcode,
+        night_phone_b: customer.phone,
+        country: 'GB',
+        no_shipping: '2',
+        landing_page: method === 'card_uk' ? 'billing' : 'login',
+        return: `${host}/#label-${order.id}`,
+        cancel_return: host
+      });
+
+      const fallbackPayPalUrl = `https://www.paypal.com/cgi-bin/webscr?${paypalParams.toString()}`;
+      const directPayPalUrl = order.paypalCheckoutUrl || data?.paypalCheckoutUrl || fallbackPayPalUrl;
+      order.paypalCheckoutUrl = directPayPalUrl;
+
+      try {
+        window.open(directPayPalUrl, '_blank');
+      } catch (paypalPopupErr) {
+        console.warn('PayPal checkout popup blocked by browser:', paypalPopupErr);
       }
 
       if (whatsappUrl) {
@@ -362,31 +378,15 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
     }
   };
 
-  // Card validation & submission handler
+  // Card validation & submission handler via PayPal Live Gateway
   const handleCardPayment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim() || !phone.trim() || !address.trim() || !city.trim() || !postcode.trim()) {
-      setErrorMessage('⚠️ Please enter your Full Name, UK Phone, and Delivery Address.');
+      setErrorMessage('⚠️ Please enter your Full Name, UK Mobile Phone, and Delivery Address in Section 1.');
       return;
     }
 
-    const cleanCard = cardNumber.replace(/\s+/g, '');
-    if (cleanCard.length < 13 || cleanCard.length > 19) {
-      setErrorMessage('⚠️ Please enter a valid 16-digit debit or credit card number.');
-      return;
-    }
-
-    if (!cardExpiry.includes('/') || cardExpiry.length < 5) {
-      setErrorMessage('⚠️ Please enter card expiration in MM/YY format.');
-      return;
-    }
-
-    if (cardCvc.length < 3) {
-      setErrorMessage('⚠️ Please enter a valid 3 or 4-digit CVV / CVC code.');
-      return;
-    }
-
-    submitOrder('card_uk', `CARD-AUTH-${Date.now().toString(36).toUpperCase()}`);
+    submitOrder('card_uk', `CARD-PAYPAL-${Date.now().toString(36).toUpperCase()}`);
   };
 
   // Manual PayPal express submit
@@ -397,22 +397,6 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
       return;
     }
     submitOrder('paypal_uk');
-  };
-
-  // Format Card Number (adds spaces every 4 digits)
-  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/\D/g, '').substring(0, 16);
-    const formatted = val.match(/.{1,4}/g)?.join(' ') || val;
-    setCardNumber(formatted);
-  };
-
-  // Format Card Expiry MM/YY
-  const handleCardExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let val = e.target.value.replace(/\D/g, '').substring(0, 4);
-    if (val.length >= 2) {
-      val = val.substring(0, 2) + '/' + val.substring(2);
-    }
-    setCardExpiry(val);
   };
 
   // Render PayPal Smart Buttons when SDK is loaded and container is mounted
@@ -705,9 +689,12 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
 
             {/* TAB CONTENT: DEBIT / CREDIT CARD */}
             {activePaymentTab === 'card' && (
-              <form onSubmit={handleCardPayment} className="space-y-3 pt-1 animate-fade-in">
-                <div className="flex items-center justify-between p-2.5 bg-[#090a0f] rounded-xl border border-slate-800">
-                  <span className="text-[11px] text-slate-300 font-medium">Accepted Cards:</span>
+              <form onSubmit={handleCardPayment} className="space-y-3.5 pt-1 animate-fade-in">
+                <div className="flex items-center justify-between p-3 bg-[#090a0f] rounded-xl border border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span className="text-[11px] text-slate-200 font-bold">PayPal Card Gateway (UK):</span>
+                  </div>
                   <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 font-mono">
                     <span className="bg-[#141622] px-1.5 py-0.5 rounded border border-slate-700 text-blue-400">VISA</span>
                     <span className="bg-[#141622] px-1.5 py-0.5 rounded border border-slate-700 text-amber-400">Mastercard</span>
@@ -716,66 +703,20 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-slate-300 font-bold mb-1">
-                    Cardholder Name
-                  </label>
-                  <input
-                    type="text"
-                    value={cardName || fullName}
-                    onChange={(e) => setCardName(e.target.value)}
-                    placeholder="Name as printed on card"
-                    className="w-full text-xs p-3 rounded-xl border border-slate-700 bg-[#0a0a0f] text-white focus:outline-none focus:border-[#d4a853]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-300 font-bold mb-1">
-                    Card Number
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      required
-                      value={cardNumber}
-                      onChange={handleCardNumberChange}
-                      placeholder="4532 •••• •••• ••••"
-                      maxLength={19}
-                      className="w-full text-xs p-3 rounded-xl border border-slate-700 bg-[#0a0a0f] text-white focus:outline-none focus:border-[#d4a853] font-mono tracking-wider"
-                    />
-                    <CreditCard className="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
+                <div className="p-3.5 bg-[#10121a] rounded-xl border border-slate-800/90 text-[11px] text-slate-300 space-y-2">
+                  <div className="flex items-center gap-1.5 text-white font-bold">
+                    <Lock className="w-3.5 h-3.5 text-[#d4a853]" />
+                    <span>Direct Bank Card Processing via PayPal</span>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-slate-300 font-bold mb-1">
-                      Expiry Date (MM/YY)
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={cardExpiry}
-                      onChange={handleCardExpiryChange}
-                      placeholder="MM/YY"
-                      maxLength={5}
-                      className="w-full text-xs p-3 rounded-xl border border-slate-700 bg-[#0a0a0f] text-white focus:outline-none focus:border-[#d4a853] font-mono text-center"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 font-bold mb-1">
-                      CVC / CVV
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      value={cardCvc}
-                      onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').substring(0, 4))}
-                      placeholder="3 or 4 digits"
-                      maxLength={4}
-                      className="w-full text-xs p-3 rounded-xl border border-slate-700 bg-[#0a0a0f] text-white focus:outline-none focus:border-[#d4a853] font-mono text-center"
-                    />
+                  <p className="text-slate-400 leading-relaxed text-[11px]">
+                    Pay instantly using any UK debit or credit card. Your payment is authorized live by PayPal&apos;s encrypted banking gateway directly into <strong>Style &amp; Class London</strong>.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 pt-1 text-[10px] text-emerald-400 font-medium">
+                    <span>✓ No PayPal account required</span>
+                    <span className="text-slate-600">&bull;</span>
+                    <span>✓ PayPal UK Buyer Protection</span>
+                    <span className="text-slate-600">&bull;</span>
+                    <span>✓ 256-bit Bank Encryption</span>
                   </div>
                 </div>
 
@@ -783,17 +724,17 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
                 <button
                   type="submit"
                   disabled={isProcessing}
-                  className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#d4a853] to-[#c5953b] hover:from-[#e0b764] hover:to-[#d4a853] text-black font-black text-xs sm:text-sm tracking-wide shadow-lg shadow-[#d4a853]/20 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-101 active:scale-99 disabled:opacity-50"
+                  className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-[#d4a853] to-[#c5953b] hover:from-[#e0b764] hover:to-[#d4a853] text-black font-black text-xs sm:text-sm tracking-wide shadow-lg shadow-[#d4a853]/25 transition-all flex items-center justify-center gap-2.5 cursor-pointer hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
                 >
                   {isProcessing ? (
                     <span className="inline-flex items-center gap-2">
                       <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                      <span>Authorizing UK Debit/Credit Card...</span>
+                      <span>Opening PayPal UK Card Gateway...</span>
                     </span>
                   ) : (
                     <>
-                      <Lock className="w-4 h-4" />
-                      <span>Pay {currencySymbol}{total.toFixed(2)} with Debit/Credit Card</span>
+                      <CreditCard className="w-4 h-4" />
+                      <span>Pay {currencySymbol}{total.toFixed(2)} with Debit / Credit Card</span>
                       <ArrowRight className="w-4 h-4 ml-1" />
                     </>
                   )}

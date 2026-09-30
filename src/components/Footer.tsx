@@ -192,8 +192,8 @@ export const Footer: React.FC<FooterProps> = ({
             <ul className="space-y-2.5 text-xs text-slate-300">
               <li className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-[#d4a853] shrink-0" />
-                <a href={`tel:${settings.merchantPhone || '+4407591878215'}`} className="hover:text-white transition-colors font-mono">
-                  {settings.merchantPhone || '+44 07591878215'}
+                <a href={`tel:${settings.merchantPhone || '+447591878215'}`} className="hover:text-white transition-colors font-mono">
+                  {settings.merchantPhone || '+44 7591 878215'}
                 </a>
               </li>
               <li className="flex items-center gap-2">

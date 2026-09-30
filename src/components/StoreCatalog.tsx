@@ -29,12 +29,20 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
   const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc' | 'condition'>('featured');
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const [hoveredImgIndex, setHoveredImgIndex] = useState<{ [productId: string]: number }>({});
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [showAllMode, setShowAllMode] = useState<boolean>(false);
+  const ITEMS_PER_PAGE = 24;
 
   React.useEffect(() => {
     if (selectedCategory && selectedCategory !== activeCollection) {
       setActiveCollection(selectedCategory);
     }
   }, [selectedCategory]);
+
+  // Reset to page 1 whenever filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [activeCollection, searchQuery, sortBy, selectedBrand]);
 
   const handleCollectionChange = (colId: string) => {
     setActiveCollection(colId);
@@ -99,6 +107,13 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
         return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
       });
   }, [products, activeCollection, selectedBrand, searchQuery, sortBy]);
+
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) || 1;
+  const paginatedProducts = useMemo(() => {
+    if (showAllMode) return filteredProducts;
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredProducts.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredProducts, currentPage, showAllMode]);
 
   const collections = [
     { id: 'all', label: 'All Pre-Loved' },
@@ -298,7 +313,7 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.map((product, idx) => {
+          {paginatedProducts.map((product, idx) => {
             const isCurrent = currentProduct.id === product.id;
             const currentImgIndex = hoveredImgIndex[product.id] || 0;
             const currentImg = product.images?.[currentImgIndex] || product.images?.[0] || '';
@@ -497,6 +512,92 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
               </motion.div>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination Bar for Scaling 0 to 1,000+ Items */}
+      {filteredProducts.length > ITEMS_PER_PAGE && (
+        <div className="mt-12 pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-300">
+          <div className="flex items-center gap-2">
+            <span>
+              Showing{' '}
+              <strong className="text-white">
+                {showAllMode
+                  ? `all ${filteredProducts.length}`
+                  : `${(currentPage - 1) * ITEMS_PER_PAGE + 1}–${Math.min(
+                      currentPage * ITEMS_PER_PAGE,
+                      filteredProducts.length
+                    )}`}
+              </strong>{' '}
+              of <strong className="text-[#d4a853]">{filteredProducts.length}</strong> unique pieces
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowAllMode(!showAllMode)}
+              className="ml-3 px-2.5 py-1 rounded-md bg-[#181a24] hover:bg-[#202434] text-[11px] text-[#d4a853] border border-slate-700 hover:border-[#d4a853]/60 transition-colors cursor-pointer"
+            >
+              {showAllMode ? 'Switch to Pages' : 'View All'}
+            </button>
+          </div>
+
+          {!showAllMode && totalPages > 1 && (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                disabled={currentPage === 1}
+                onClick={() => {
+                  setCurrentPage((p) => Math.max(1, p - 1));
+                  document.getElementById('store-catalog')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="p-2 rounded-xl bg-[#141622] hover:bg-[#1a1e2e] text-white border border-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                aria-label="Previous Page"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                  .map((pageNum, idx, arr) => {
+                    const prev = arr[idx - 1];
+                    const showEllipsis = prev && pageNum - prev > 1;
+
+                    return (
+                      <React.Fragment key={pageNum}>
+                        {showEllipsis && <span className="px-1 text-slate-500">…</span>}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCurrentPage(pageNum);
+                            document.getElementById('store-catalog')?.scrollIntoView({ behavior: 'smooth' });
+                          }}
+                          className={`w-8 h-8 rounded-xl font-bold text-xs transition-all ${
+                            currentPage === pageNum
+                              ? 'bg-[#d4a853] text-black shadow-md shadow-[#d4a853]/20 font-black'
+                              : 'bg-[#141622] hover:bg-[#1a1e2e] text-slate-300 border border-slate-800'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      </React.Fragment>
+                    );
+                  })}
+              </div>
+
+              <button
+                type="button"
+                disabled={currentPage === totalPages}
+                onClick={() => {
+                  setCurrentPage((p) => Math.min(totalPages, p + 1));
+                  document.getElementById('store-catalog')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="p-2 rounded-xl bg-[#141622] hover:bg-[#1a1e2e] text-white border border-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                aria-label="Next Page"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       )}
     </section>

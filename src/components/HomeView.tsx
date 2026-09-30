@@ -192,7 +192,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </h1>
 
           <p className="text-base sm:text-lg text-slate-200 max-w-2xl mx-auto font-normal leading-relaxed drop-shadow-md">
-            Curated vintage &amp; designer fashion illuminated under the London night lights. Each garment is a unique 1-of-1 piece, authenticated and dispatched directly across the UK.
+            Discover stylish, comfortable, and quality clothing for every occasion. Find your perfect look with us.
           </p>
 
           {/* Call to Actions */}
