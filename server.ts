@@ -352,7 +352,7 @@ app.post("/api/orders", async (req, res) => {
 
     // Carrier selection support: Evri (£2.60), InPost (£2.89), Royal Mail (£3.65)
     const rawCarrier = String(carrier || req.body?.carrier || 'evri').toLowerCase();
-    let carrierKey = 'evri';
+    let carrierKey: 'evri' | 'inpost' | 'royalmail' = 'evri';
     if (rawCarrier.includes('royal')) {
       carrierKey = 'royalmail';
     } else if (rawCarrier.includes('inpost')) {

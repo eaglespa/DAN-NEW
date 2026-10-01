@@ -51,12 +51,12 @@ export interface CartItem {
 
 export interface CustomerDetails {
   fullName: string;
-  email: string;
+  email?: string;
   phone: string;
   address: string;
   city: string;
   postcode: string;
-  country: string;
+  country?: string;
   notes?: string;
 }
 
@@ -82,7 +82,7 @@ export interface Order {
   discount: number;
   total: number;
   currency: string;
-  paymentMethod: 'paypal_uk' | 'whatsapp' | 'card';
+  paymentMethod: 'paypal_uk' | 'whatsapp' | 'card' | 'card_uk';
   paymentStatus: 'completed' | 'pending' | 'failed';
   whatsappNotified: boolean;
   addressQrDataUrl?: string;

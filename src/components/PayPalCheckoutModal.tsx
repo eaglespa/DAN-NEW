@@ -148,6 +148,14 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
     }
 
     try {
+      const customer = {
+        fullName: fullNameRef.current.trim(),
+        phone: phoneRef.current.trim(),
+        address: addressRef.current.trim(),
+        city: cityRef.current.trim(),
+        postcode: postcodeRef.current.trim()
+      };
+
       const orderPayload = {
         carrier: carrierRef.current,
         items: itemsRef.current.map(it => ({
@@ -158,18 +166,12 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
           size: it.selectedSize,
           image: it.product.images[0] || ''
         })),
-        customer: {
-          fullName: fullNameRef.current,
-          phone: phoneRef.current,
-          address: addressRef.current,
-          city: cityRef.current,
-          postcode: postcodeRef.current
-        },
+        customer,
         paymentMethod: method,
         notes: paymentRefId
           ? `${method === 'card_uk' ? 'Credit/Debit Card' : 'PayPal UK'} Transaction Ref: ${paymentRefId}`
           : method === 'card_uk'
-          ? `Card Paid (${cardNumber.slice(-4) ? '•••• ' + cardNumber.slice(-4) : 'Direct Card'})`
+          ? 'Card Paid (UK Bank Direct)'
           : 'PayPal UK Express Transaction'
       };
 
@@ -230,8 +232,8 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
             city: customer.city,
             postcode: customer.postcode
           },
-          carrier: selectedCarrier.id,
-          carrierName: selectedCarrier.name,
+          carrier: (carrierRef.current as 'evri' | 'inpost' | 'royalmail') || 'evri',
+          carrierName: (carrierRates[carrierRef.current] || carrierRates['evri']).name,
           subtotal: Number(subtotalRef.current.toFixed(2)),
           shipping: Number(shippingRef.current.toFixed(2)),
           discount: 0,
@@ -243,6 +245,8 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
           addressQrUrl,
           notes: orderPayload.notes || ''
         };
+
+        const activeRate = carrierRates[carrierRef.current] || carrierRates['evri'];
 
         const itemsFormatted = clientOrderedItems
           .map((it, idx) => {
@@ -299,8 +303,8 @@ ${itemsFormatted}
 ${photosList}
 
 6️⃣ *SHIPPING COMPANY:*
-🚚 *${selectedCarrier.name}* (£${order.shipping === 0 ? 'FREE' : order.shipping.toFixed(2)})
-⏱️ Tracked Delivery: ${selectedCarrier.deliveryEstimate}
+🚚 *${activeRate.name}* (£${order.shipping === 0 ? 'FREE' : order.shipping.toFixed(2)})
+⏱️ Tracked Delivery: ${activeRate.time}
 ----------------------------------------
 
 🏷️ *PRINT 4×6 THERMAL SHIPPING LABEL:*
@@ -308,7 +312,7 @@ ${host}/#label-${order.id}
 
 Style And Class London · Sustainable Pre-Loved Luxury`;
 
-        const cleanMerchantPhone = String(settings.merchantWhatsApp || '+447591878215').replace(/[^0-9]/g, '');
+        const cleanMerchantPhone = String(merchantWhatsApp || '+447591878215').replace(/[^0-9]/g, '');
         whatsappUrl = `https://wa.me/${cleanMerchantPhone}?text=${encodeURIComponent(whatsappMessage)}`;
         removedFromStoreProducts = clientRemoved;
       } else if (!response.ok || !data) {
