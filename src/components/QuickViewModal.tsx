@@ -8,6 +8,7 @@ interface QuickViewModalProps {
   onClose: () => void;
   onAddToCart: (product: Product, size?: string) => void;
   onBuyNowWithPayPal: (product: Product, size?: string) => void;
+  onOrderViaWhatsApp?: (product: Product) => void;
   settings: StoreSettings;
 }
 
@@ -17,6 +18,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
   onClose,
   onAddToCart,
   onBuyNowWithPayPal,
+  onOrderViaWhatsApp,
   settings
 }) => {
   if (!isOpen || !product) return null;
@@ -201,16 +203,22 @@ Is this piece still available for UK delivery?`;
               <span>Buy with PayPal (UK)</span>
             </button>
 
-            <a
+            <button
               id="quick-view-whatsapp-btn"
-              href={waUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full bg-[#25D366] hover:bg-[#20ba5a] text-black font-extrabold py-3 px-4 rounded-xl text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-md"
+              type="button"
+              onClick={() => {
+                if (onOrderViaWhatsApp) {
+                  onOrderViaWhatsApp(product);
+                } else {
+                  window.open(waUrl, '_blank');
+                }
+                onClose();
+              }}
+              className="w-full bg-[#25D366] hover:bg-[#20ba5a] text-black font-extrabold py-3 px-4 rounded-xl text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer"
             >
               <MessageCircle className="w-4 h-4 fill-black text-black" />
               <span>Order via WhatsApp (+44 7591 878215)</span>
-            </a>
+            </button>
           </div>
         </div>
       </div>

@@ -1,5 +1,62 @@
 [
   {
+    "id": "prod-w-4",
+    "code": "BOX 1-5",
+    "sku": "BOX 1-5",
+    "title": "Floral Wrap Midi Dress",
+    "slug": "floral-wrap-midi-dress-ghost-london-box-1-5",
+    "brand": "Ghost London",
+    "condition": "Excellent",
+    "collection": "women",
+    "category": "Maxi Dress",
+    "price": 28,
+    "compareAtPrice": 89,
+    "currency": "GBP",
+    "currencySymbol": "£",
+    "rating": 5,
+    "reviewCount": 16,
+    "stock": 1,
+    "status": "active",
+    "featured": true,
+    "material": "Satin Finish Crepe Viscose",
+    "sizes": [
+      "UK 12"
+    ],
+    "colors": [
+      {
+        "name": "Vintage Botanical",
+        "hex": "#4b5563",
+        "imageIndex": 0
+      }
+    ],
+    "tags": [
+      "Dress",
+      "Wrap Dress",
+      "Ghost London",
+      "Midi",
+      "Summer"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=800&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=800&auto=format&fit=crop&q=80"
+    ],
+    "bulletPoints": [
+      "Authentic Ghost London signature draped wrap dress.",
+      "Vintage floral motif with self-tie belt and tiered hemline.",
+      "True UK 12 fitting with graceful silhouette.",
+      "1-of-1 pre-loved piece in pristine inspected condition."
+    ],
+    "description": "A showstopping pre-loved midi dress by Ghost London. Flowing crepe fabric with flattering wrap bodice. Inspected with immaculate seams, ready for weddings, garden parties, and elegant weekend dinners.",
+    "specifications": {
+      "Brand": "Ghost London",
+      "Box / Item Code": "BOX 1-5",
+      "Condition Grade": "Excellent Pre-Loved",
+      "Size": "UK 12",
+      "Garment Type": "Wrap Midi Dress",
+      "Stock": "1 of 1"
+    }
+  },
+  {
     "id": "prod-w-5",
     "code": "BOX 1-6",
     "sku": "BOX 1-6",
@@ -735,6 +792,62 @@
       "Brand": "Michael Kors",
       "Box / Item Code": "A0002",
       "Condition Grade": "Excellent",
+      "Stock": "1 of 1"
+    }
+  },
+  {
+    "id": "prod-acc-3",
+    "code": "A0003",
+    "sku": "A0003",
+    "title": "Classic Bridle Leather Belt with Brass Buckle",
+    "slug": "classic-bridle-leather-belt-mulberry-a0003",
+    "brand": "Mulberry",
+    "condition": "Very Good",
+    "collection": "accessories",
+    "category": "Belts",
+    "price": 36,
+    "compareAtPrice": 140,
+    "currency": "GBP",
+    "currencySymbol": "£",
+    "rating": 4.9,
+    "reviewCount": 8,
+    "stock": 1,
+    "status": "active",
+    "featured": false,
+    "material": "Full-Grain English Bridle Leather",
+    "sizes": [
+      "UK 32–34"
+    ],
+    "colors": [
+      {
+        "name": "Rich Cognac Tan",
+        "hex": "#78350f",
+        "imageIndex": 0
+      }
+    ],
+    "tags": [
+      "Belt",
+      "Mulberry",
+      "Leather",
+      "Accessories",
+      "Tan"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1624222247344-550fb60583dc?w=800&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80"
+    ],
+    "bulletPoints": [
+      "Authentic Mulberry full-grain bridle leather belt with subtle debossed tree logo.",
+      "Solid antique brass roller buckle.",
+      "Natural leather patina with decades of life ahead.",
+      "1-of-1 pre-loved item."
+    ],
+    "description": "Exquisite English leathercraft. Vegetable-tanned bridle leather finished with beveled hand-waxed edges.",
+    "specifications": {
+      "Brand": "Mulberry",
+      "Box / Item Code": "A0003",
+      "Condition Grade": "Very Good",
+      "Size": "Fits 32 to 34 inch waist",
       "Stock": "1 of 1"
     }
   }

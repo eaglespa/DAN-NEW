@@ -55,6 +55,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   // Settings form states
   const [settingsPhone, setSettingsPhone] = useState(settings.merchantWhatsApp);
   const [settingsPayPalId, setSettingsPayPalId] = useState(settings.paypalClientId);
+  const [settingsPayPalEmail, setSettingsPayPalEmail] = useState(settings.merchantPayPalEmail || settings.merchantEmail || 'RomeroMoscow@gmail.com');
   const [settingsStoreName, setSettingsStoreName] = useState(settings.storeName);
   const [settingsSavedNotice, setSettingsSavedNotice] = useState(false);
   const [actionNotice, setActionNotice] = useState('');
@@ -169,6 +170,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     await onUpdateSettings({
       merchantWhatsApp: settingsPhone,
       paypalClientId: settingsPayPalId,
+      merchantPayPalEmail: settingsPayPalEmail,
+      merchantEmail: settingsPayPalEmail,
       storeName: settingsStoreName
     });
     setSettingsSavedNotice(true);
@@ -634,6 +637,23 @@ Total: £${o.total.toFixed(2)} [PAID]
                 value={settingsPhone}
                 onChange={(e) => setSettingsPhone(e.target.value)}
                 placeholder="+447591878215"
+                className="w-full text-xs p-2.5 rounded-xl border border-slate-700 bg-[#0a0a0f] text-white outline-none focus:border-[#d4a853] font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1">
+                Merchant PayPal Account Email (Receives Payments) *
+              </label>
+              <p className="text-[11px] text-slate-400 mb-1.5">
+                Every PayPal order and card transaction is credited directly to this PayPal address.
+              </p>
+              <input
+                type="email"
+                required
+                value={settingsPayPalEmail}
+                onChange={(e) => setSettingsPayPalEmail(e.target.value)}
+                placeholder="RomeroMoscow@gmail.com"
                 className="w-full text-xs p-2.5 rounded-xl border border-slate-700 bg-[#0a0a0f] text-white outline-none focus:border-[#d4a853] font-mono"
               />
             </div>

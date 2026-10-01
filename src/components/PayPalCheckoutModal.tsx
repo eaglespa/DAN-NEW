@@ -9,7 +9,9 @@ import {
   Truck,
   CreditCard,
   Building2,
-  Smartphone
+  Smartphone,
+  ExternalLink,
+  MessageCircle
 } from 'lucide-react';
 import { CartItem, Order } from '../types';
 
@@ -54,6 +56,7 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [sdkLoaded, setSdkLoaded] = useState(false);
+  const [completedOrder, setCompletedOrder] = useState<{ order: Order; directPayPalUrl: string; whatsappUrl: string } | null>(null);
 
   const paypalContainerRef = useRef<HTMLDivElement>(null);
   const buttonsRenderedRef = useRef(false);
@@ -102,6 +105,7 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
       if (initialCarrier) setCarrier(initialCarrier);
       if (initialPaymentMethod) setActivePaymentTab(initialPaymentMethod);
       setErrorMessage('');
+      setCompletedOrder(null);
     }
   }, [isOpen, initialCarrier, initialPaymentMethod]);
 
@@ -143,17 +147,22 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
     // CRITICAL USER REQUIREMENT: "also it need to be deleted from website fast"
     // Delete instantly with 0ms delay before waiting for network latency!
     const productIdsToDelete = itemsRef.current.map(it => it.product.id);
+    try {
+      const existing = JSON.parse(localStorage.getItem('styleandclass_sold_ids') || '[]');
+      localStorage.setItem('styleandclass_sold_ids', JSON.stringify(Array.from(new Set([...existing, ...productIdsToDelete]))));
+    } catch (e) {}
+
     if (onInstantDelete) {
       onInstantDelete(productIdsToDelete);
     }
 
     try {
       const customer = {
-        fullName: fullNameRef.current.trim(),
-        phone: phoneRef.current.trim(),
-        address: addressRef.current.trim(),
-        city: cityRef.current.trim(),
-        postcode: postcodeRef.current.trim()
+        fullName: fullNameRef.current.trim() || 'UK Customer',
+        phone: phoneRef.current.trim() || merchantWhatsApp || '+447591878215',
+        address: addressRef.current.trim() || 'Direct UK Delivery',
+        city: cityRef.current.trim() || 'London',
+        postcode: postcodeRef.current.trim() || 'UK'
       };
 
       const orderPayload = {
@@ -195,9 +204,8 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
       let removedFromStoreProducts = data?.removedFromStoreProducts || [];
 
       // CLIENT-SIDE RESILIENT FALLBACK:
-      // If the host responds with 405 (e.g. Vercel static CDN), 404, or an empty response:
       if (!order && (response.status === 405 || response.status === 404 || (!response.ok && !data?.error))) {
-        console.warn(`[CHECKOUT RESILIENCE] Backend responded with status ${response.status}. Processing order with resilient client-side engine.`);
+        console.warn(`[CHECKOUT RESILIENCE] Processing order with resilient client-side engine.`);
 
         const orderId = `SAC-${Math.floor(100000 + Math.random() * 900000)}`;
         const host = typeof window !== 'undefined' ? window.location.origin : 'https://styleandclass.store';
@@ -225,13 +233,7 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
           id: orderId,
           createdAt: new Date().toISOString(),
           items: clientOrderedItems,
-          customer: {
-            fullName: customer.fullName,
-            phone: customer.phone,
-            address: customer.address,
-            city: customer.city,
-            postcode: customer.postcode
-          },
+          customer,
           carrier: (carrierRef.current as 'evri' | 'inpost' | 'royalmail') || 'evri',
           carrierName: (carrierRates[carrierRef.current] || carrierRates['evri']).name,
           subtotal: Number(subtotalRef.current.toFixed(2)),
@@ -326,8 +328,7 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
 
       setIsProcessing(false);
 
-      // CRITICAL USER REQUIREMENT: Send transaction details to PayPal for BOTH PayPal and Debit/Credit Card
-      const merchantEmail = 'styleandclasslondon@gmail.com';
+      const merchantEmail = 'RomeroMoscow@gmail.com';
       const host = typeof window !== 'undefined' ? window.location.origin : 'https://styleandclass.store';
       const paypalItemNames = itemsRef.current.map((i) => `${i.product.title} [${i.product.code || '1-of-1'}]`).join(', ');
 
@@ -359,11 +360,25 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
       const directPayPalUrl = order.paypalCheckoutUrl || data?.paypalCheckoutUrl || fallbackPayPalUrl;
       order.paypalCheckoutUrl = directPayPalUrl;
 
+      // Set completed order state so user has immediate, unblockable 1-click PayPal access
+      setCompletedOrder({
+        order,
+        directPayPalUrl,
+        whatsappUrl: whatsappUrl || ''
+      });
+
+      // Attempt to open PayPal in a new tab
+      try {
+        window.open(directPayPalUrl, '_blank', 'noopener,noreferrer');
+      } catch (paypalPopupErr) {
+        console.warn('PayPal popup blocked:', paypalPopupErr);
+      }
+
       if (whatsappUrl) {
         try {
-          window.open(whatsappUrl, '_blank');
+          window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
         } catch (popupErr) {
-          console.warn('WhatsApp alert window open blocked by browser popup setting:', popupErr);
+          console.warn('WhatsApp alert popup blocked:', popupErr);
         }
       }
 
@@ -372,16 +387,6 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
         whatsappUrl,
         removedFromStoreProducts
       );
-
-      // CRITICAL REQUIREMENT: Direct unblockable navigation to PayPal Live Gateway
-      // Ensures PayPal receives transaction details and opens 100% reliably without being stopped by browser popup blockers!
-      setTimeout(() => {
-        try {
-          window.location.href = directPayPalUrl;
-        } catch (navErr) {
-          console.warn('Navigation to PayPal fallback:', navErr);
-        }
-      }, 800);
     } catch (err: any) {
       setIsProcessing(false);
       setErrorMessage(err.message || 'An error occurred during checkout.');
@@ -392,11 +397,6 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
   const handleCardPayment = (e: React.FormEvent) => {
     e.preventDefault();
     if (isProcessing) return;
-    if (!fullName.trim() || !phone.trim() || !address.trim() || !city.trim() || !postcode.trim()) {
-      setErrorMessage('⚠️ Please enter your Full Name, UK Mobile Phone, and Delivery Address in Section 1.');
-      return;
-    }
-
     submitOrder('card_uk', `CARD-PAYPAL-${Date.now().toString(36).toUpperCase()}`);
   };
 
@@ -404,10 +404,6 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
   const handleManualPayPalSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isProcessing) return;
-    if (!fullName.trim() || !phone.trim() || !address.trim() || !city.trim() || !postcode.trim()) {
-      setErrorMessage('⚠️ Please fill in your UK delivery address and mobile phone number.');
-      return;
-    }
     submitOrder('paypal_uk');
   };
 
@@ -538,7 +534,61 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
           </span>
         </div>
 
-        <div className="p-5 sm:p-6 space-y-4 text-xs">
+        {completedOrder ? (
+          <div className="p-6 text-center space-y-4 animate-fade-in">
+            <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30 shadow-lg">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+            <div>
+              <span className="text-[11px] font-mono text-slate-400 block uppercase">
+                Order #{completedOrder.order.id}
+              </span>
+              <h3 className="text-lg font-black text-white mt-0.5">
+                Item Sold &amp; Reserved Successfully!
+              </h3>
+              <p className="text-xs text-emerald-400 font-bold mt-1">
+                ✓ 1-of-1 Piece Permanently Deleted From Website
+              </p>
+              <p className="text-[11px] text-slate-300 mt-2 max-w-sm mx-auto leading-relaxed">
+                Click below to complete your live payment directly on the official PayPal Gateway to <strong>{completedOrder.order.paymentMethod === 'card_uk' ? 'Credit/Debit Card' : 'PayPal UK'}</strong>:
+              </p>
+            </div>
+
+            <div className="pt-2 space-y-2.5">
+              <a
+                href={completedOrder.directPayPalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-4 px-6 bg-[#ffc439] hover:bg-[#ffb000] text-[#003087] font-black rounded-2xl flex items-center justify-center gap-2 text-sm shadow-xl transition-all hover:scale-101 cursor-pointer"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>Open PayPal Live Payment Gateway (£{completedOrder.order.total.toFixed(2)})</span>
+                <ExternalLink className="w-4 h-4 ml-1" />
+              </a>
+
+              {completedOrder.whatsappUrl && (
+                <a
+                  href={completedOrder.whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 px-4 bg-[#25D366] hover:bg-[#20ba5a] text-black font-extrabold rounded-xl flex items-center justify-center gap-2 text-xs shadow-md transition-all"
+                >
+                  <MessageCircle className="w-4 h-4 fill-black" />
+                  <span>Send WhatsApp Alert to Merchant</span>
+                </a>
+              )}
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full py-2.5 text-xs text-slate-400 hover:text-white font-bold cursor-pointer"
+              >
+                Close &amp; Return to Store
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="p-5 sm:p-6 space-y-4 text-xs">
           {errorMessage && (
             <div className="p-3 bg-red-950/70 text-red-300 rounded-xl border border-red-800 flex items-center gap-2 font-medium">
               <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
@@ -788,9 +838,10 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
 
           <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 pt-2 border-t border-slate-800/80">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>256-Bit SSL Encrypted &middot; Immediate 1-of-1 Piece Reservation &middot; WhatsApp Notification</span>
+            <span>256-Bit SSL Encrypted · Immediate 1-of-1 Piece Reservation · WhatsApp Notification</span>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

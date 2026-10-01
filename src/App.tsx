@@ -86,11 +86,19 @@ export default function App() {
         if (text) {
           try {
             const prodData: Product[] = JSON.parse(text);
-            if (Array.isArray(prodData) && prodData.length > 0) {
-              setProducts(prodData);
+            if (Array.isArray(prodData)) {
+              // Intersect with locally cached sold IDs to guarantee immediate deletion
+              const localSold: string[] = JSON.parse(localStorage.getItem('styleandclass_sold_ids') || '[]');
+              const localSoldSet = new Set(localSold);
+              const cleanProds = prodData.filter(p => !localSoldSet.has(p.id) && p.stock > 0 && p.status === 'active');
+
+              setProducts(cleanProds);
               setCurrentProduct((prev) => {
-                const match = prodData.find((p) => p.id === prev.id && p.status === 'active' && p.stock > 0);
-                return match || prodData.find(p => p.status === 'active' && p.stock > 0) || prodData[0];
+                if (localSoldSet.has(prev.id) || prev.stock <= 0) {
+                  return cleanProds[0] || { ...prev, stock: 0, status: 'archived' };
+                }
+                const match = cleanProds.find((p) => p.id === prev.id);
+                return match || cleanProds[0] || { ...prev, stock: 0, status: 'archived' };
               });
             }
           } catch (jsonErr) {
@@ -318,23 +326,31 @@ export default function App() {
     setIsPayPalCheckoutOpen(true);
   };
 
-  // Direct WhatsApp Order Button on Product Page
-  const handleOrderViaWhatsAppDirect = async () => {
-    if (currentProduct.stock <= 0 || currentProduct.status === 'archived') {
+  // Direct WhatsApp Order Button on Product Page (supports currentProduct or specific product)
+  const handleOrderViaWhatsAppDirect = async (productToOrder?: Product) => {
+    const targetProduct = productToOrder || currentProduct;
+    if (targetProduct.stock <= 0 || targetProduct.status === 'archived' || targetProduct.status === 'sold') {
       alert('This 1-of-1 piece has already been purchased and removed from the store.');
       return;
     }
 
-    const boughtId = currentProduct.id;
-    const boughtTitle = currentProduct.title;
+    const boughtId = targetProduct.id;
+    const boughtTitle = targetProduct.title;
+
+    // Persist immediately in localStorage
+    try {
+      const existing: string[] = JSON.parse(localStorage.getItem('styleandclass_sold_ids') || '[]');
+      localStorage.setItem('styleandclass_sold_ids', JSON.stringify(Array.from(new Set([...existing, boughtId]))));
+    } catch (e) {}
 
     // Immediately mark as sold out & remove from active store
     setProducts((prev) => prev.filter((p) => p.id !== boughtId));
-    setCurrentProduct((prev) => ({
-      ...prev,
-      stock: 0,
-      status: 'archived'
-    }));
+    setCurrentProduct((prev) => {
+      if (prev.id === boughtId) {
+        return { ...prev, stock: 0, status: 'archived' };
+      }
+      return prev;
+    });
 
     setInventoryAlert(`✓ "${boughtTitle}" has been purchased & permanently removed from the website!`);
 
@@ -346,12 +362,12 @@ export default function App() {
           carrier: 'evri',
           items: [
             {
-              productId: currentProduct.id,
-              productTitle: currentProduct.title,
-              quantity,
-              color: selectedColor,
-              size: selectedSize,
-              image: currentProduct.images[0] || ''
+              productId: targetProduct.id,
+              productTitle: targetProduct.title,
+              quantity: productToOrder ? 1 : quantity,
+              color: productToOrder ? (targetProduct.colors[0]?.name || 'Standard') : selectedColor,
+              size: productToOrder ? (targetProduct.sizes[0] || 'Standard') : selectedSize,
+              image: targetProduct.images[0] || ''
             }
           ],
           customer: {
@@ -371,11 +387,11 @@ export default function App() {
       const order = data?.order;
 
       if (whatsappUrl) {
-        window.open(whatsappUrl, '_blank');
+        window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
       } else {
         const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9+]/g, '').replace('+', '');
-        const message = `👋 Hello Style & Class London! I want to order the:\n\n👗 *${currentProduct.title}* [${currentProduct.code || currentProduct.sku || '1-of-1'}]\nBrand: ${currentProduct.brand || 'Designer'}\nSize: ${selectedSize}\nQuantity: ${quantity}\nPrice: £${(currentProduct.price * quantity).toFixed(2)}\n\nPlease assist me with quick UK delivery checkout!`;
-        window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
+        const message = `👋 Hello Style & Class London! I want to order the:\n\n👗 *${targetProduct.title}* [${targetProduct.code || targetProduct.sku || '1-of-1'}]\nBrand: ${targetProduct.brand || 'Designer'}\nSize: ${targetProduct.sizes[0] || 'Standard'}\nQuantity: 1\nPrice: £${targetProduct.price.toFixed(2)}\n\nPlease assist me with quick UK delivery checkout!`;
+        window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
       }
 
       if (order) {
@@ -388,8 +404,8 @@ export default function App() {
     } catch (e) {
       console.warn('Backend order recording error:', e);
       const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9+]/g, '').replace('+', '');
-      const message = `👋 Hello Style & Class London! I want to order the:\n\n👗 *${currentProduct.title}* [${currentProduct.code || currentProduct.sku || '1-of-1'}]\nBrand: ${currentProduct.brand || 'Designer'}\nSize: ${selectedSize}\nQuantity: ${quantity}\nPrice: £${(currentProduct.price * quantity).toFixed(2)}\n\nPlease assist me with quick UK delivery checkout!`;
-      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
+      const message = `👋 Hello Style & Class London! I want to order the:\n\n👗 *${targetProduct.title}* [${targetProduct.code || targetProduct.sku || '1-of-1'}]\nBrand: ${targetProduct.brand || 'Designer'}\nSize: ${targetProduct.sizes[0] || 'Standard'}\nQuantity: 1\nPrice: £${targetProduct.price.toFixed(2)}\n\nPlease assist me with quick UK delivery checkout!`;
+      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -400,6 +416,12 @@ export default function App() {
     const boughtIds = new Set(cart.map((it) => it.product.id));
     const boughtTitles = cart.map((it) => it.product.title);
     const cartItems = [...cart];
+
+    // Persist immediately in localStorage
+    try {
+      const existing: string[] = JSON.parse(localStorage.getItem('styleandclass_sold_ids') || '[]');
+      localStorage.setItem('styleandclass_sold_ids', JSON.stringify(Array.from(new Set([...existing, ...Array.from(boughtIds)]))));
+    } catch (e) {}
 
     // Immediately remove bought items from website products state and empty cart
     setProducts((prev) => prev.filter((p) => !boughtIds.has(p.id)));
@@ -445,7 +467,7 @@ export default function App() {
       const order = data?.order;
 
       if (whatsappUrl) {
-        window.open(whatsappUrl, '_blank');
+        window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
       }
 
       if (order) {
@@ -463,7 +485,7 @@ export default function App() {
         .join('\n');
       const subtotal = cartItems.reduce((a, b) => a + b.product.price * b.quantity, 0);
       const message = `👋 Hello Style & Class London! I'd like to place an order directly via WhatsApp:\n\n*Items in Bag:*\n${itemsText}\n\n*Subtotal: £${subtotal.toFixed(2)}*\nPlease provide payment and UK delivery confirmation!`;
-      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
+      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -479,6 +501,13 @@ export default function App() {
 
     // Get purchased product IDs
     const purchasedIds = new Set(order.items.map((it) => it.productId));
+
+    // Save to localStorage as permanent record in browser
+    try {
+      const existing: string[] = JSON.parse(localStorage.getItem('styleandclass_sold_ids') || '[]');
+      const updated = Array.from(new Set([...existing, ...Array.from(purchasedIds)]));
+      localStorage.setItem('styleandclass_sold_ids', JSON.stringify(updated));
+    } catch (e) {}
 
     // Instantly remove bought items from website products state
     setProducts((prev) => prev.filter((p) => !purchasedIds.has(p.id)));
@@ -847,6 +876,10 @@ export default function App() {
           ]);
           setQuickViewProduct(null);
           setIsPayPalCheckoutOpen(true);
+        }}
+        onOrderViaWhatsApp={(p) => {
+          setQuickViewProduct(null);
+          handleOrderViaWhatsAppDirect(p);
         }}
         settings={settings}
       />
