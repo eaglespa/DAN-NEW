@@ -34,6 +34,25 @@ interface PayPalCheckoutModalProps {
   onOrderSuccess: (order: Order, whatsappUrl: string, removedProducts: string[]) => void;
 }
 
+// ── Card helpers ────────────────────────────────────────────────
+const formatCardNumber = (val: string) => {
+  const digits = val.replace(/\D/g, '').slice(0, 16);
+  return digits.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+};
+const formatExpiry = (val: string) => {
+  const digits = val.replace(/\D/g, '').slice(0, 4);
+  if (digits.length >= 3) return digits.slice(0, 2) + '/' + digits.slice(2);
+  return digits;
+};
+const detectCardType = (num: string): string => {
+  const d = num.replace(/\s/g, '');
+  if (/^4/.test(d)) return 'VISA';
+  if (/^5[1-5]/.test(d) || /^2[2-7]/.test(d)) return 'Mastercard';
+  if (/^3[47]/.test(d)) return 'AMEX';
+  if (/^(6304|6759|6761|6762|6763)/.test(d)) return 'Maestro';
+  return '';
+};
+
 export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
   isOpen,
   onClose,
@@ -57,6 +76,13 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
   const [errorMessage, setErrorMessage] = useState('');
   const [sdkLoaded, setSdkLoaded] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<{ order: Order; directPayPalUrl: string; whatsappUrl: string } | null>(null);
+
+  // ── Card payment fields ──
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv]     = useState('');
+  const [cardName, setCardName]   = useState('');
+  const [cardErrors, setCardErrors] = useState<{ number?: string; expiry?: string; cvv?: string; name?: string }>({});
 
   const paypalContainerRef = useRef<HTMLDivElement>(null);
   const buttonsRenderedRef = useRef(false);
@@ -397,7 +423,31 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
   const handleCardPayment = (e: React.FormEvent) => {
     e.preventDefault();
     if (isProcessing) return;
-    submitOrder('card_uk', `CARD-PAYPAL-${Date.now().toString(36).toUpperCase()}`);
+
+    // Validate card fields
+    const errs: typeof cardErrors = {};
+    const rawNum = cardNumber.replace(/\s/g, '');
+    if (!cardName.trim()) errs.name = 'Cardholder name is required';
+    if (rawNum.length < 13 || rawNum.length > 19) errs.number = 'Enter a valid card number';
+    const [expM, expY] = cardExpiry.split('/');
+    const now = new Date();
+    const month = parseInt(expM, 10);
+    const year = 2000 + parseInt(expY || '0', 10);
+    if (!expM || !expY || month < 1 || month > 12 || year < now.getFullYear() ||
+        (year === now.getFullYear() && month < now.getMonth() + 1)) {
+      errs.expiry = 'Enter a valid expiry date (MM/YY)';
+    }
+    const isAmex = detectCardType(cardNumber) === 'AMEX';
+    if ((isAmex && cardCvv.length !== 4) || (!isAmex && cardCvv.length !== 3)) {
+      errs.cvv = `CVV must be ${isAmex ? '4' : '3'} digits`;
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setCardErrors(errs);
+      return;
+    }
+    setCardErrors({});
+    submitOrder('card_uk', `CARD-${rawNum.slice(-4)}-${Date.now().toString(36).toUpperCase()}`);
   };
 
   // Manual PayPal express submit
@@ -751,38 +801,138 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
 
             {/* TAB CONTENT: DEBIT / CREDIT CARD */}
             {activePaymentTab === 'card' && (
-              <form onSubmit={handleCardPayment} className="space-y-3.5 pt-1 animate-fade-in">
+              <form onSubmit={handleCardPayment} className="space-y-3.5 pt-1 animate-fade-in" noValidate>
+
+                {/* Accepted cards strip */}
                 <div className="flex items-center justify-between p-3 bg-[#090a0f] rounded-xl border border-slate-800">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span className="text-[11px] text-slate-200 font-bold">PayPal Card Gateway (UK):</span>
+                    <span className="text-[11px] text-slate-200 font-bold">Secure Card Payment (UK):</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 font-mono">
-                    <span className="bg-[#141622] px-1.5 py-0.5 rounded border border-slate-700 text-blue-400">VISA</span>
-                    <span className="bg-[#141622] px-1.5 py-0.5 rounded border border-slate-700 text-amber-400">Mastercard</span>
-                    <span className="bg-[#141622] px-1.5 py-0.5 rounded border border-slate-700 text-cyan-400">AMEX</span>
-                    <span className="bg-[#141622] px-1.5 py-0.5 rounded border border-slate-700 text-emerald-400">Maestro</span>
-                  </div>
-                </div>
-
-                <div className="p-3.5 bg-[#10121a] rounded-xl border border-slate-800/90 text-[11px] text-slate-300 space-y-2">
-                  <div className="flex items-center gap-1.5 text-white font-bold">
-                    <Lock className="w-3.5 h-3.5 text-[#d4a853]" />
-                    <span>Direct Bank Card Processing via PayPal</span>
-                  </div>
-                  <p className="text-slate-400 leading-relaxed text-[11px]">
-                    Pay instantly using any UK debit or credit card. Your payment is authorized live by PayPal&apos;s encrypted banking gateway directly into <strong>Style &amp; Class London</strong>.
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2 pt-1 text-[10px] text-emerald-400 font-medium">
-                    <span>✓ No PayPal account required</span>
-                    <span className="text-slate-600">&bull;</span>
-                    <span>✓ PayPal UK Buyer Protection</span>
-                    <span className="text-slate-600">&bull;</span>
-                    <span>✓ 256-bit Bank Encryption</span>
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold font-mono">
+                    <span className={`px-1.5 py-0.5 rounded border ${
+                      detectCardType(cardNumber) === 'VISA' ? 'bg-blue-900/40 border-blue-500 text-blue-300' : 'bg-[#141622] border-slate-700 text-blue-400'
+                    }`}>VISA</span>
+                    <span className={`px-1.5 py-0.5 rounded border ${
+                      detectCardType(cardNumber) === 'Mastercard' ? 'bg-amber-900/40 border-amber-500 text-amber-300' : 'bg-[#141622] border-slate-700 text-amber-400'
+                    }`}>MC</span>
+                    <span className={`px-1.5 py-0.5 rounded border ${
+                      detectCardType(cardNumber) === 'AMEX' ? 'bg-cyan-900/40 border-cyan-500 text-cyan-300' : 'bg-[#141622] border-slate-700 text-cyan-400'
+                    }`}>AMEX</span>
+                    <span className={`px-1.5 py-0.5 rounded border ${
+                      detectCardType(cardNumber) === 'Maestro' ? 'bg-emerald-900/40 border-emerald-500 text-emerald-300' : 'bg-[#141622] border-slate-700 text-emerald-400'
+                    }`}>Maestro</span>
                   </div>
                 </div>
 
-                {/* Primary Card Submit Button */}
+                {/* ── Cardholder Name ── */}
+                <div>
+                  <label className="block text-slate-300 font-bold mb-1 text-[11px]">
+                    Cardholder Name *
+                  </label>
+                  <input
+                    type="text"
+                    autoComplete="cc-name"
+                    value={cardName}
+                    onChange={e => { setCardName(e.target.value); setCardErrors(p => ({ ...p, name: undefined })); }}
+                    placeholder="Name as it appears on card"
+                    className={`w-full text-xs p-3 rounded-xl border ${
+                      cardErrors.name ? 'border-red-500 bg-red-950/20' : 'border-slate-700 bg-[#0a0a0f]'
+                    } text-white focus:outline-none focus:border-[#d4a853] transition-colors`}
+                  />
+                  {cardErrors.name && <p className="text-red-400 text-[10px] mt-1 font-medium">{cardErrors.name}</p>}
+                </div>
+
+                {/* ── Card Number ── */}
+                <div>
+                  <label className="block text-slate-300 font-bold mb-1 text-[11px]">
+                    Card Number *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="cc-number"
+                      value={cardNumber}
+                      onChange={e => {
+                        setCardNumber(formatCardNumber(e.target.value));
+                        setCardErrors(p => ({ ...p, number: undefined }));
+                      }}
+                      placeholder="1234 5678 9012 3456"
+                      maxLength={19}
+                      className={`w-full text-xs p-3 pr-14 rounded-xl border font-mono tracking-widest ${
+                        cardErrors.number ? 'border-red-500 bg-red-950/20' : 'border-slate-700 bg-[#0a0a0f]'
+                      } text-white focus:outline-none focus:border-[#d4a853] transition-colors`}
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black font-mono">
+                      {detectCardType(cardNumber) === 'VISA' && <span className="text-blue-400">VISA</span>}
+                      {detectCardType(cardNumber) === 'Mastercard' && <span className="text-amber-400">MC</span>}
+                      {detectCardType(cardNumber) === 'AMEX' && <span className="text-cyan-400">AMEX</span>}
+                      {detectCardType(cardNumber) === 'Maestro' && <span className="text-emerald-400">Maestro</span>}
+                      {!detectCardType(cardNumber) && <CreditCard className="w-4 h-4 text-slate-600" />}
+                    </div>
+                  </div>
+                  {cardErrors.number && <p className="text-red-400 text-[10px] mt-1 font-medium">{cardErrors.number}</p>}
+                </div>
+
+                {/* ── Expiry & CVV ── */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-300 font-bold mb-1 text-[11px]">Expiry Date *</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="cc-exp"
+                      value={cardExpiry}
+                      onChange={e => {
+                        setCardExpiry(formatExpiry(e.target.value));
+                        setCardErrors(p => ({ ...p, expiry: undefined }));
+                      }}
+                      placeholder="MM/YY"
+                      maxLength={5}
+                      className={`w-full text-xs p-3 rounded-xl border font-mono ${
+                        cardErrors.expiry ? 'border-red-500 bg-red-950/20' : 'border-slate-700 bg-[#0a0a0f]'
+                      } text-white focus:outline-none focus:border-[#d4a853] transition-colors`}
+                    />
+                    {cardErrors.expiry && <p className="text-red-400 text-[10px] mt-1 font-medium">{cardErrors.expiry}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-bold mb-1 text-[11px]">
+                      CVV / CVC * <span className="text-slate-500 font-normal">(back of card)</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        autoComplete="cc-csc"
+                        value={cardCvv}
+                        onChange={e => {
+                          setCardCvv(e.target.value.replace(/\D/g, '').slice(0, detectCardType(cardNumber) === 'AMEX' ? 4 : 3));
+                          setCardErrors(p => ({ ...p, cvv: undefined }));
+                        }}
+                        placeholder={detectCardType(cardNumber) === 'AMEX' ? '4 digits' : '3 digits'}
+                        maxLength={detectCardType(cardNumber) === 'AMEX' ? 4 : 3}
+                        className={`w-full text-xs p-3 rounded-xl border font-mono ${
+                          cardErrors.cvv ? 'border-red-500 bg-red-950/20' : 'border-slate-700 bg-[#0a0a0f]'
+                        } text-white focus:outline-none focus:border-[#d4a853] transition-colors`}
+                      />
+                      <Lock className="w-3.5 h-3.5 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                    {cardErrors.cvv && <p className="text-red-400 text-[10px] mt-1 font-medium">{cardErrors.cvv}</p>}
+                  </div>
+                </div>
+
+                {/* Trust note */}
+                <div className="flex flex-wrap items-center gap-2 text-[10px] text-emerald-400 font-medium px-1">
+                  <span>✓ No PayPal account required</span>
+                  <span className="text-slate-600">&bull;</span>
+                  <span>✓ PayPal UK Buyer Protection</span>
+                  <span className="text-slate-600">&bull;</span>
+                  <span>✓ 256-bit TLS Encryption</span>
+                </div>
+
+                {/* Submit Button */}
                 <button
                   type="submit"
                   disabled={isProcessing}
@@ -791,12 +941,12 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
                   {isProcessing ? (
                     <span className="inline-flex items-center gap-2">
                       <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                      <span>Opening PayPal UK Card Gateway...</span>
+                      <span>Processing Card Payment...</span>
                     </span>
                   ) : (
                     <>
-                      <CreditCard className="w-4 h-4" />
-                      <span>Pay {currencySymbol}{total.toFixed(2)} with Debit / Credit Card</span>
+                      <Lock className="w-4 h-4" />
+                      <span>Pay {currencySymbol}{total.toFixed(2)} Securely</span>
                       <ArrowRight className="w-4 h-4 ml-1" />
                     </>
                   )}
