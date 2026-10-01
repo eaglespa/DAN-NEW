@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Sparkles, ArrowRight, ShieldCheck, Heart, Leaf, RefreshCw, Star, CheckCircle2, ChevronRight, Eye, ShoppingBag, MessageCircle, Truck } from 'lucide-react';
 import { Product, StoreSettings } from '../types';
+import { ProductCardSlideshow } from './ProductCardSlideshow';
 
 interface HomeViewProps {
   products: Product[];
@@ -552,18 +553,6 @@ const ProductCard: React.FC<{
   onQuickView: (p: Product) => void;
   cleanPhone: string;
 }> = ({ product, index, onSelectProduct, onAddToCart, onQuickView, cleanPhone }) => {
-  const [imgIdx, setImgIdx] = useState(0);
-
-  const handleNext = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setImgIdx((prev) => (prev + 1) % product.images.length);
-  };
-
-  const handlePrev = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setImgIdx((prev) => (prev - 1 + product.images.length) % product.images.length);
-  };
-
   const directWaMsg = `Hi Style & Class London! I want to order "${product.title}" (${product.code || product.sku}) priced at £${product.price.toFixed(2)}. Is it still available?`;
   const directWaUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(directWaMsg)}`;
 
@@ -585,16 +574,16 @@ const ProductCard: React.FC<{
       whileTap={{ scale: 0.985 }}
       className="group bg-[#0e1017] rounded-2xl border border-slate-800 hover:border-[#d4a853]/60 transition-colors shadow-md hover:shadow-2xl hover:shadow-[#d4a853]/10 overflow-hidden cursor-pointer flex flex-col justify-between"
     >
-      {/* Image Container */}
-      <div className="relative aspect-[3/4] bg-black/60 overflow-hidden">
-        <img
-          src={product.images[imgIdx] || product.images[0]}
-          alt={product.title}
-          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-        />
-
+      {/* Full Interactive Multi-Photo Slideshow */}
+      <ProductCardSlideshow
+        images={product.images}
+        alt={product.title}
+        aspectRatioClass="aspect-[3/4]"
+        autoPlayInterval={1600}
+        onImageClick={() => onSelectProduct(product)}
+      >
         {/* Badges */}
-        <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 items-start">
+        <div className="absolute top-4 left-2.5 flex flex-col gap-1.5 items-start z-10 pointer-events-none">
           <span className="px-2 py-0.5 rounded-full bg-black/80 backdrop-blur-xs text-[#d4a853] text-[10px] font-mono font-bold border border-[#d4a853]/40">
             {product.code || product.sku}
           </span>
@@ -603,38 +592,14 @@ const ProductCard: React.FC<{
           </span>
         </div>
 
-        <div className="absolute top-2.5 right-2.5">
+        <div className="absolute top-4 right-2.5 z-10 pointer-events-none">
           <span className="px-2 py-0.5 rounded-full bg-black/80 text-slate-300 text-[10px] font-extrabold border border-slate-700">
             1-of-1
           </span>
         </div>
 
-        {/* Carousel arrows */}
-        {product.images.length > 1 && (
-          <div className="absolute inset-x-2 top-1/2 -translate-y-1/2 flex justify-between opacity-0 group-hover:opacity-100 transition-opacity">
-            <motion.button
-              type="button"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={handlePrev}
-              className="w-7 h-7 rounded-full bg-black/70 hover:bg-black text-white text-xs flex items-center justify-center border border-slate-700 shadow-md cursor-pointer"
-            >
-              &#10094;
-            </motion.button>
-            <motion.button
-              type="button"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={handleNext}
-              className="w-7 h-7 rounded-full bg-black/70 hover:bg-black text-white text-xs flex items-center justify-center border border-slate-700 shadow-md cursor-pointer"
-            >
-              &#10095;
-            </motion.button>
-          </div>
-        )}
-
         {/* Quick View Button */}
-        <div className="absolute bottom-2.5 inset-x-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute bottom-2.5 inset-x-2.5 opacity-0 group-hover:opacity-100 transition-opacity z-20">
           <motion.button
             type="button"
             whileHover={{ scale: 1.02 }}
@@ -649,7 +614,7 @@ const ProductCard: React.FC<{
             <span>Quick View</span>
           </motion.button>
         </div>
-      </div>
+      </ProductCardSlideshow>
 
       {/* Product Card Details */}
       <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">

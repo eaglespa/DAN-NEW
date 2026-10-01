@@ -194,7 +194,10 @@ app.get("/api/products", (req, res) => {
 // GET single product by id or slug
 app.get("/api/products/:id", (req, res) => {
   const { id } = req.params;
-  const product = products.find((p) => p.id === id || p.slug === id);
+  let product = products.find((p) => p.id === id || p.slug === id);
+  if (!product) {
+    product = INITIAL_PRODUCTS.find((p) => p.id === id || p.slug === id);
+  }
   if (!product) {
     return res.status(404).json({ error: "Product not found" });
   }
@@ -294,9 +297,23 @@ app.post("/api/orders", async (req, res) => {
 
     // Verify and process stock for each item
     for (const item of items) {
-      const product = products.find((p) => p.id === item.productId);
+      let product = products.find((p) => p.id === item.productId);
       if (!product) {
-        return res.status(400).json({ success: false, error: `Product not found: ${item.productId}` });
+        // Fallback: check INITIAL_PRODUCTS if not found in active products
+        const fallback = INITIAL_PRODUCTS.find((p) => p.id === item.productId);
+        if (fallback) {
+          product = { ...fallback };
+          products.push(product);
+          persistProducts();
+        }
+      }
+
+      if (!product) {
+        const itemTitle = item.productTitle || item.title || item.productId;
+        return res.status(400).json({
+          success: false,
+          error: `Sorry, this unique 1-of-1 pre-loved piece ("${itemTitle}") is no longer in inventory or has already been purchased by another customer.`
+        });
       }
 
       if (product.stock < (Number(item.quantity) || 1)) {

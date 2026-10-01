@@ -1,6 +1,7 @@
 import React from 'react';
 import { Star, AlertTriangle } from 'lucide-react';
 import { Product } from '../types';
+import { ProductCardSlideshow } from './ProductCardSlideshow';
 
 interface RelatedProductsProps {
   products: Product[];
@@ -27,7 +28,7 @@ export const RelatedProducts: React.FC<RelatedProductsProps> = ({
             You May Also Like
           </h3>
           <p className="text-xs text-slate-500 mt-1">
-            Engineered footwear from the Wyluxe Athletics London catalogue
+            Curated 1-of-1 pieces from the Style &amp; Class London boutique
           </p>
         </div>
       </div>
@@ -47,16 +48,19 @@ export const RelatedProducts: React.FC<RelatedProductsProps> = ({
               }}
               className="group cursor-pointer bg-white rounded-3xl border border-slate-200/90 overflow-hidden hover:shadow-xl hover:border-slate-400 transition-all duration-300 flex flex-col"
             >
-              {/* Product Image Stage */}
-              <div className="relative bg-gradient-to-b from-slate-100/90 to-slate-200/50 aspect-square overflow-hidden">
-                <img
-                  src={p.images[0]}
-                  alt={p.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-
+              {/* Product Image Slideshow */}
+              <ProductCardSlideshow
+                images={p.images}
+                alt={p.title}
+                aspectRatioClass="aspect-square"
+                autoPlayInterval={1600}
+                onImageClick={() => {
+                  onSelectProduct(p);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              >
                 {/* Badges */}
-                <div className="absolute top-3 left-3 flex flex-col gap-1">
+                <div className="absolute top-4 left-3 flex flex-col gap-1 z-10 pointer-events-none">
                   {discountPercent > 0 && (
                     <span className="bg-amber-500 text-slate-950 text-[10.5px] font-black px-2.5 py-0.5 rounded-full shadow-xs">
                       -{discountPercent}%
@@ -70,12 +74,12 @@ export const RelatedProducts: React.FC<RelatedProductsProps> = ({
                   )}
                 </div>
 
-                <div className="absolute top-3 right-3">
+                <div className="absolute top-4 right-3 z-10 pointer-events-none">
                   <span className="bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">
                     Stock: {p.stock}
                   </span>
                 </div>
-              </div>
+              </ProductCardSlideshow>
 
               {/* Info */}
               <div className="p-5 flex-1 flex flex-col justify-between">

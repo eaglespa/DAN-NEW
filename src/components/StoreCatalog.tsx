@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Search, Sparkles, Filter, Eye, ShoppingBag, Tag, CheckCircle2, AlertTriangle, ArrowUpDown, ChevronLeft, ChevronRight, Truck } from 'lucide-react';
 import { Product, StoreSettings } from '../types';
+import { ProductCardSlideshow } from './ProductCardSlideshow';
 
 interface StoreCatalogProps {
   products: Product[];
@@ -28,7 +29,6 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc' | 'condition'>('featured');
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
-  const [hoveredImgIndex, setHoveredImgIndex] = useState<{ [productId: string]: number }>({});
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showAllMode, setShowAllMode] = useState<boolean>(false);
   const ITEMS_PER_PAGE = 24;
@@ -122,22 +122,6 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
     { id: 'kids', label: "Kids' Wear" },
     { id: 'accessories', label: 'Bags & Accessories' }
   ];
-
-  const handleNextCardImg = (e: React.MouseEvent, p: Product) => {
-    e.stopPropagation();
-    if (!p.images || p.images.length <= 1) return;
-    const current = hoveredImgIndex[p.id] || 0;
-    const next = (current + 1) % p.images.length;
-    setHoveredImgIndex(prev => ({ ...prev, [p.id]: next }));
-  };
-
-  const handlePrevCardImg = (e: React.MouseEvent, p: Product) => {
-    e.stopPropagation();
-    if (!p.images || p.images.length <= 1) return;
-    const current = hoveredImgIndex[p.id] || 0;
-    const prevIndex = (current - 1 + p.images.length) % p.images.length;
-    setHoveredImgIndex(prev => ({ ...prev, [p.id]: prevIndex }));
-  };
 
   return (
     <section id="store-catalog" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 scroll-mt-24">
@@ -315,8 +299,6 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {paginatedProducts.map((product, idx) => {
             const isCurrent = currentProduct.id === product.id;
-            const currentImgIndex = hoveredImgIndex[product.id] || 0;
-            const currentImg = product.images?.[currentImgIndex] || product.images?.[0] || '';
             const discountPct = product.compareAtPrice > product.price
               ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
               : 0;
@@ -342,17 +324,16 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
                   isCurrent ? 'border-[#d4a853] ring-1 ring-[#d4a853]/40' : 'border-slate-800 hover:border-[#d4a853]/60'
                 }`}
               >
-                {/* Image Container with Multi-Photo Carousel */}
-                <div className="relative aspect-[3/4] bg-[#0a0a0f] overflow-hidden">
-                  <img
-                    src={currentImg}
-                    alt={`${product.title} - ${product.brand || 'Pre-Loved'} Style & Class`}
-                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                    loading="lazy"
-                  />
-
+                {/* Full Interactive Multi-Photo Slideshow */}
+                <ProductCardSlideshow
+                  images={product.images}
+                  alt={`${product.title} - ${product.brand || 'Pre-Loved'} Style & Class`}
+                  aspectRatioClass="aspect-[3/4]"
+                  autoPlayInterval={1600}
+                  onImageClick={() => onSelectProduct(product)}
+                >
                   {/* Badges Overlay */}
-                  <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+                  <div className="absolute top-4 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
                     {/* Item Code Badge */}
                     {product.code && (
                       <span className="bg-black/85 text-[#f5c469] border border-[#d4a853]/40 text-[10.5px] font-mono font-bold px-2 py-0.5 rounded shadow-sm backdrop-blur-xs">
@@ -381,50 +362,22 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
 
                   {/* Discount pill */}
                   {discountPct > 0 && (
-                    <div className="absolute top-3 right-3 bg-amber-500 text-black text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-sm">
+                    <div className="absolute top-4 right-3 bg-amber-500 text-black text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-sm z-10 pointer-events-none">
                       SAVE {discountPct}%
                     </div>
                   )}
 
-                  {/* Photo Navigation Arrows (if multiple photos) */}
-                  {product.images && product.images.length > 1 && (
-                    <>
-                      <motion.button
-                        type="button"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={(e) => handlePrevCardImg(e, product)}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 hover:bg-black text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 cursor-pointer shadow-md"
-                        aria-label="Previous photo"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </motion.button>
-                      <motion.button
-                        type="button"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={(e) => handleNextCardImg(e, product)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 hover:bg-black text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 cursor-pointer shadow-md"
-                        aria-label="Next photo"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </motion.button>
-
-                      {/* Photo dots counter */}
-                      <div className="absolute bottom-2 left-1/2 -translate-y-0 -translate-x-1/2 bg-black/70 px-2 py-0.5 rounded-full text-[9px] text-slate-300 font-mono flex items-center gap-1">
-                        <span>{currentImgIndex + 1}/{product.images.length}</span>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Quick View Floating Overlay on Hover */}
-                  <div className="absolute inset-x-3 bottom-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  {/* Quick View & Inspect Floating Overlay on Hover */}
+                  <div className="absolute inset-x-3 bottom-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
                     <motion.button
                       id={`quick-view-btn-${product.id}`}
                       type="button"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.96 }}
-                      onClick={() => onQuickView(product)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onQuickView(product);
+                      }}
                       className="flex-1 bg-black/85 hover:bg-black text-white text-xs font-bold py-2 rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 shadow-lg backdrop-blur-xs transition-colors cursor-pointer"
                     >
                       <Eye className="w-3.5 h-3.5 text-[#d4a853]" />
@@ -435,14 +388,17 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
                       type="button"
                       whileHover={{ scale: 1.04 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => onSelectProduct(product)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectProduct(product);
+                      }}
                       className="bg-[#d4a853] hover:bg-[#e8c97a] text-black text-xs font-extrabold px-3 py-2 rounded-xl shadow-lg transition-colors cursor-pointer"
                       title="Inspect full details & buy box"
                     >
                       Inspect
                     </motion.button>
                   </div>
-                </div>
+                </ProductCardSlideshow>
 
                 {/* Card Information */}
                 <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">

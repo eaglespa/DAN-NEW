@@ -136,6 +136,7 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
 
   // Execute order submission to /api/orders
   const submitOrder = async (method: 'paypal_uk' | 'card_uk', paymentRefId?: string) => {
+    if (isProcessing) return;
     setErrorMessage('');
     setIsProcessing(true);
 
@@ -151,6 +152,7 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
         carrier: carrierRef.current,
         items: itemsRef.current.map(it => ({
           productId: it.product.id,
+          productTitle: it.product.title,
           quantity: it.quantity,
           color: it.selectedColor,
           size: it.selectedSize,
@@ -381,6 +383,7 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
   // Card validation & submission handler via PayPal Live Gateway
   const handleCardPayment = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isProcessing) return;
     if (!fullName.trim() || !phone.trim() || !address.trim() || !city.trim() || !postcode.trim()) {
       setErrorMessage('⚠️ Please enter your Full Name, UK Mobile Phone, and Delivery Address in Section 1.');
       return;
@@ -392,6 +395,7 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
   // Manual PayPal express submit
   const handleManualPayPalSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isProcessing) return;
     if (!fullName.trim() || !phone.trim() || !address.trim() || !city.trim() || !postcode.trim()) {
       setErrorMessage('⚠️ Please fill in your UK delivery address and mobile phone number.');
       return;
