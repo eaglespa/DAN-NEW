@@ -1,0 +1,999 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { AnnouncementBar } from './components/AnnouncementBar';
+import { Header } from './components/Header';
+import { HomeView } from './components/HomeView';
+import { StoreCatalog } from './components/StoreCatalog';
+import { ContactView } from './components/ContactView';
+import { ProductGallery } from './components/ProductGallery';
+import { ProductInfo } from './components/ProductInfo';
+import { ProductTabs } from './components/ProductTabs';
+import { SizeGuideModal } from './components/SizeGuideModal';
+import { CartDrawer } from './components/CartDrawer';
+import { PayPalCheckoutModal } from './components/PayPalCheckoutModal';
+import { OrderSuccessModal } from './components/OrderSuccessModal';
+import { AdminModal } from './components/AdminModal';
+import { AdminPasswordModal } from './components/AdminPasswordModal';
+import { QuickViewModal } from './components/QuickViewModal';
+import { LegalModal, LegalPolicyType } from './components/LegalModal';
+import { StickyAddToCart } from './components/StickyAddToCart';
+import { SocialProofToast } from './components/SocialProofToast';
+import { FloatingWhatsAppButton } from './components/FloatingWhatsAppButton';
+import { ScrollToTopButton } from './components/ScrollToTopButton';
+import { RelatedProducts } from './components/RelatedProducts';
+import { Footer } from './components/Footer';
+import { ShippingLabelView } from './components/ShippingLabelView';
+import { Product, CartItem, Order, StoreSettings } from './types';
+import { INITIAL_PRODUCTS, INITIAL_SETTINGS } from './data/initialProducts';
+import { AlertCircle, CheckCircle2, ChevronRight, Home } from 'lucide-react';
+
+export default function App() {
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [settings, setSettings] = useState<StoreSettings>(INITIAL_SETTINGS);
+  const [currency, setCurrency] = useState<string>('GBP');
+
+  // Page Routing & Navigation
+  const [activePage, setActivePage] = useState<'home' | 'collections' | 'contact' | 'detail' | 'label'>('home');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedLabelOrder, setSelectedLabelOrder] = useState<Order | null>(null);
+
+  // Currently viewed product (prefer active in-stock item)
+  const [currentProduct, setCurrentProduct] = useState<Product>(
+    INITIAL_PRODUCTS.find((p) => p.status === 'active' && p.stock > 0) || INITIAL_PRODUCTS[0]
+  );
+  const [selectedColor, setSelectedColor] = useState<string>(INITIAL_PRODUCTS[0].colors[0]?.name || 'Standard');
+  const [selectedSize, setSelectedSize] = useState<string>(INITIAL_PRODUCTS[0].sizes[0] || 'Standard');
+  const [quantity, setQuantity] = useState<number>(1);
+  const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
+
+  // Modals & Drawers
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isPayPalCheckoutOpen, setIsPayPalCheckoutOpen] = useState(false);
+  const [checkoutCarrier, setCheckoutCarrier] = useState<string>('evri');
+  const [checkoutInitialPaymentMethod, setCheckoutInitialPaymentMethod] = useState<'paypal' | 'card'>('paypal');
+  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [legalPolicyType, setLegalPolicyType] = useState<LegalPolicyType>(null);
+  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+
+  // Trigger protected store brain/database
+  const handleRequestAdminAccess = () => {
+    setIsPasswordModalOpen(true);
+  };
+
+  const handleAdminPasswordSuccess = () => {
+    setIsPasswordModalOpen(false);
+    setIsAdminOpen(true);
+  };
+
+  const [successOrderData, setSuccessOrderData] = useState<{
+    order: Order;
+    whatsappUrl: string;
+    removedProducts: string[];
+  } | null>(null);
+
+  // Cart
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [inventoryAlert, setInventoryAlert] = useState<string | null>(null);
+
+  // Load data from Backend API safely
+  const refreshData = useCallback(async () => {
+    try {
+      const resProducts = await fetch('/api/products?all=true');
+      if (resProducts.ok) {
+        const text = await resProducts.text();
+        if (text) {
+          try {
+            const prodData: Product[] = JSON.parse(text);
+            if (Array.isArray(prodData)) {
+              // Intersect with locally cached sold IDs to guarantee immediate deletion
+              const localSold: string[] = JSON.parse(localStorage.getItem('styleandclass_sold_ids') || '[]');
+              const localSoldSet = new Set(localSold);
+              const cleanProds = prodData.filter(p => !localSoldSet.has(p.id) && p.stock > 0 && p.status === 'active');
+
+              setProducts(cleanProds);
+              setCurrentProduct((prev) => {
+                if (localSoldSet.has(prev.id) || prev.stock <= 0) {
+                  return cleanProds[0] || { ...prev, stock: 0, status: 'archived' };
+                }
+                const match = cleanProds.find((p) => p.id === prev.id);
+                return match || cleanProds[0] || { ...prev, stock: 0, status: 'archived' };
+              });
+            }
+          } catch (jsonErr) {
+            console.warn('Failed to parse products JSON:', jsonErr);
+          }
+        }
+      }
+
+      const resOrders = await fetch('/api/orders');
+      if (resOrders.ok) {
+        const text = await resOrders.text();
+        if (text) {
+          try {
+            const orderData = JSON.parse(text);
+            if (Array.isArray(orderData)) {
+              setOrders(orderData);
+            }
+          } catch (jsonErr) {
+            console.warn('Failed to parse orders JSON:', jsonErr);
+          }
+        }
+      }
+
+      const resSettings = await fetch('/api/settings');
+      if (resSettings.ok) {
+        const text = await resSettings.text();
+        if (text) {
+          try {
+            const setData = JSON.parse(text);
+            if (setData && typeof setData === 'object') {
+              setSettings(setData);
+            }
+          } catch (jsonErr) {
+            console.warn('Failed to parse settings JSON:', jsonErr);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Backend API fetch error (using fallback state):', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshData();
+  }, [refreshData]);
+
+  // URL Hash & Query routing for thermal shipping label
+  useEffect(() => {
+    const handleUrlRoute = () => {
+      const hash = window.location.hash;
+      const search = window.location.search;
+      const params = new URLSearchParams(search);
+      const labelParam = params.get('label') || params.get('order');
+
+      if (hash.startsWith('#label') || labelParam || window.location.pathname.includes('/label')) {
+        const rawId = (labelParam || hash.replace('#label-', '').replace('#label/', '').replace('#label', '')).trim();
+        setActivePage('label');
+        if (rawId && orders.length > 0) {
+          const match = orders.find(
+            (o) => o.id.toLowerCase() === rawId.toLowerCase() || o.id.toLowerCase() === `sac-${rawId.toLowerCase()}`
+          );
+          if (match) setSelectedLabelOrder(match);
+        }
+      } else if (hash === '#terms' || hash === '#terms-and-conditions' || hash === '#terms-conditions') {
+        setLegalPolicyType('terms');
+      } else if (hash === '#privacy' || hash === '#privacy-policy') {
+        setLegalPolicyType('privacy');
+      } else if (hash === '#cookie' || hash === '#cookie-policy' || hash === '#cookies') {
+        setLegalPolicyType('cookie');
+      }
+    };
+
+    handleUrlRoute();
+    window.addEventListener('hashchange', handleUrlRoute);
+    window.addEventListener('popstate', handleUrlRoute);
+    return () => {
+      window.removeEventListener('hashchange', handleUrlRoute);
+      window.removeEventListener('popstate', handleUrlRoute);
+    };
+  }, [orders]);
+
+  // Navigation Handler
+  const handleNavigate = (page: 'home' | 'collections' | 'contact' | 'detail', category?: string) => {
+    setActivePage(page);
+    if (category) {
+      setSelectedCategory(category);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSelectColor = (colorName: string) => {
+    setSelectedColor(colorName);
+    const colorObj = currentProduct.colors.find((c) => c.name === colorName);
+    if (colorObj && typeof colorObj.imageIndex === 'number' && currentProduct.images[colorObj.imageIndex]) {
+      setActiveImageIndex(colorObj.imageIndex);
+    }
+  };
+
+  const handleSelectProduct = (product: Product) => {
+    setCurrentProduct(product);
+    setSelectedColor(product.colors[0]?.name || 'Standard');
+    setSelectedSize(product.sizes[0] || 'Standard');
+    setQuantity(1);
+    setActiveImageIndex(0);
+    setActivePage('detail');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Generic Add-To-Cart handler from card or list
+  const handleAddToCartFromCard = (product: Product, size?: string) => {
+    if (product.stock <= 0) {
+      alert('Sorry, this unique pre-loved piece is already reserved.');
+      return;
+    }
+
+    const targetSize = size || product.sizes[0] || 'Standard';
+    const targetColor = product.colors[0]?.name || 'Standard';
+
+    setCart((prev) => {
+      const existingIdx = prev.findIndex(
+        (it) =>
+          it.product.id === product.id &&
+          it.selectedColor === targetColor &&
+          it.selectedSize === targetSize
+      );
+
+      if (existingIdx > -1) {
+        const updated = [...prev];
+        const newQty = Math.min(product.stock, updated[existingIdx].quantity + 1);
+        updated[existingIdx] = { ...updated[existingIdx], quantity: newQty };
+        return updated;
+      } else {
+        return [
+          ...prev,
+          {
+            product,
+            selectedColor: targetColor,
+            selectedSize: targetSize,
+            quantity: 1
+          }
+        ];
+      }
+    });
+
+    setIsCartOpen(true);
+  };
+
+  // Cart Handlers
+  const handleAddToCart = () => {
+    if (currentProduct.stock <= 0) {
+      setInventoryAlert('Sorry, this 1-of-1 piece is currently sold out.');
+      return;
+    }
+
+    setCart((prev) => {
+      const existingIdx = prev.findIndex(
+        (it) =>
+          it.product.id === currentProduct.id &&
+          it.selectedColor === selectedColor &&
+          it.selectedSize === selectedSize
+      );
+
+      if (existingIdx > -1) {
+        const updated = [...prev];
+        const newQty = Math.min(currentProduct.stock, updated[existingIdx].quantity + quantity);
+        updated[existingIdx] = { ...updated[existingIdx], quantity: newQty };
+        return updated;
+      } else {
+        return [
+          ...prev,
+          {
+            product: currentProduct,
+            selectedColor,
+            selectedSize,
+            quantity: Math.min(currentProduct.stock, quantity)
+          }
+        ];
+      }
+    });
+
+    setIsCartOpen(true);
+  };
+
+  const handleUpdateQuantity = (idx: number, newQty: number) => {
+    setCart((prev) => {
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], quantity: newQty };
+      return updated;
+    });
+  };
+
+  const handleRemoveCartItem = (idx: number) => {
+    setCart((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  // Direct PayPal Buy Button on Product Page
+  const handleBuyWithPayPalDirect = () => {
+    if (currentProduct.stock <= 0) return;
+    setCart([
+      {
+        product: currentProduct,
+        selectedColor,
+        selectedSize,
+        quantity
+      }
+    ]);
+    setCheckoutInitialPaymentMethod('paypal');
+    setIsCartOpen(false);
+    setIsPayPalCheckoutOpen(true);
+  };
+
+  // Direct Debit/Credit Card Buy Button on Product Page
+  const handleBuyWithCardDirect = () => {
+    if (currentProduct.stock <= 0) return;
+    setCart([
+      {
+        product: currentProduct,
+        selectedColor,
+        selectedSize,
+        quantity
+      }
+    ]);
+    setCheckoutInitialPaymentMethod('card');
+    setIsCartOpen(false);
+    setIsPayPalCheckoutOpen(true);
+  };
+
+  // Direct WhatsApp Order Button on Product Page (supports currentProduct or specific product)
+  const handleOrderViaWhatsAppDirect = async (productToOrder?: Product) => {
+    const targetProduct = productToOrder || currentProduct;
+    if (targetProduct.stock <= 0 || targetProduct.status === 'archived' || targetProduct.status === 'sold') {
+      alert('This 1-of-1 piece has already been purchased and removed from the store.');
+      return;
+    }
+
+    const boughtId = targetProduct.id;
+    const boughtTitle = targetProduct.title;
+
+    // Persist immediately in localStorage
+    try {
+      const existing: string[] = JSON.parse(localStorage.getItem('styleandclass_sold_ids') || '[]');
+      localStorage.setItem('styleandclass_sold_ids', JSON.stringify(Array.from(new Set([...existing, boughtId]))));
+    } catch (e) {}
+
+    // Immediately mark as sold out & remove from active store
+    setProducts((prev) => prev.filter((p) => p.id !== boughtId));
+    setCurrentProduct((prev) => {
+      if (prev.id === boughtId) {
+        return { ...prev, stock: 0, status: 'archived' };
+      }
+      return prev;
+    });
+
+    setInventoryAlert(`✓ "${boughtTitle}" has been purchased & permanently removed from the website!`);
+
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          carrier: 'evri',
+          items: [
+            {
+              productId: targetProduct.id,
+              productTitle: targetProduct.title,
+              quantity: productToOrder ? 1 : quantity,
+              color: productToOrder ? (targetProduct.colors[0]?.name || 'Standard') : selectedColor,
+              size: productToOrder ? (targetProduct.sizes[0] || 'Standard') : selectedSize,
+              image: targetProduct.images[0] || ''
+            }
+          ],
+          customer: {
+            fullName: 'WhatsApp Customer',
+            phone: settings.merchantWhatsApp || '+447591878215',
+            address: 'Direct WhatsApp Customer UK',
+            city: 'London',
+            postcode: 'UK'
+          },
+          paymentMethod: 'whatsapp',
+          notes: 'Customer ordered directly via WhatsApp button'
+        })
+      });
+
+      const data = await response.json();
+      const whatsappUrl = data?.whatsappUrl;
+      const order = data?.order;
+
+      if (whatsappUrl) {
+        window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9+]/g, '').replace('+', '');
+        const message = `👋 Hello Style & Class London! I want to order the:\n\n👗 *${targetProduct.title}* [${targetProduct.code || targetProduct.sku || '1-of-1'}]\nBrand: ${targetProduct.brand || 'Designer'}\nSize: ${targetProduct.sizes[0] || 'Standard'}\nQuantity: 1\nPrice: £${targetProduct.price.toFixed(2)}\n\nPlease assist me with quick UK delivery checkout!`;
+        window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+      }
+
+      if (order) {
+        setSuccessOrderData({
+          order,
+          whatsappUrl: whatsappUrl || '',
+          removedProducts: [boughtTitle]
+        });
+      }
+    } catch (e) {
+      console.warn('Backend order recording error:', e);
+      const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9+]/g, '').replace('+', '');
+      const message = `👋 Hello Style & Class London! I want to order the:\n\n👗 *${targetProduct.title}* [${targetProduct.code || targetProduct.sku || '1-of-1'}]\nBrand: ${targetProduct.brand || 'Designer'}\nSize: ${targetProduct.sizes[0] || 'Standard'}\nQuantity: 1\nPrice: £${targetProduct.price.toFixed(2)}\n\nPlease assist me with quick UK delivery checkout!`;
+      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  // WhatsApp Order from Cart Drawer
+  const handleCheckoutWhatsAppFromCart = async () => {
+    if (cart.length === 0) return;
+
+    const boughtIds = new Set(cart.map((it) => it.product.id));
+    const boughtTitles = cart.map((it) => it.product.title);
+    const cartItems = [...cart];
+
+    // Persist immediately in localStorage
+    try {
+      const existing: string[] = JSON.parse(localStorage.getItem('styleandclass_sold_ids') || '[]');
+      localStorage.setItem('styleandclass_sold_ids', JSON.stringify(Array.from(new Set([...existing, ...Array.from(boughtIds)]))));
+    } catch (e) {}
+
+    // Immediately remove bought items from website products state and empty cart
+    setProducts((prev) => prev.filter((p) => !boughtIds.has(p.id)));
+    setCurrentProduct((prev) => {
+      if (boughtIds.has(prev.id)) {
+        return { ...prev, stock: 0, status: 'archived' };
+      }
+      return prev;
+    });
+    setCart([]);
+    setIsCartOpen(false);
+
+    setInventoryAlert(`✓ "${boughtTitles.join(', ')}" purchased & permanently removed from the website!`);
+
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          carrier: 'evri',
+          items: cartItems.map((it) => ({
+            productId: it.product.id,
+            productTitle: it.product.title,
+            quantity: it.quantity,
+            color: it.selectedColor,
+            size: it.selectedSize,
+            image: it.product.images[0] || ''
+          })),
+          customer: {
+            fullName: 'WhatsApp Customer',
+            phone: settings.merchantWhatsApp || '+447591878215',
+            address: 'Direct WhatsApp Customer UK',
+            city: 'London',
+            postcode: 'UK'
+          },
+          paymentMethod: 'whatsapp',
+          notes: 'Customer placed order directly via WhatsApp bag'
+        })
+      });
+
+      const data = await response.json();
+      const whatsappUrl = data?.whatsappUrl;
+      const order = data?.order;
+
+      if (whatsappUrl) {
+        window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      }
+
+      if (order) {
+        setSuccessOrderData({
+          order,
+          whatsappUrl: whatsappUrl || '',
+          removedProducts: boughtTitles
+        });
+      }
+    } catch (e) {
+      console.warn('Backend order recording error from cart:', e);
+      const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9+]/g, '').replace('+', '');
+      const itemsText = cartItems
+        .map((it) => `• ${it.product.title} [${it.product.code || it.product.sku || '1-of-1'}] (${it.selectedSize}) x${it.quantity} - £${(it.product.price * it.quantity).toFixed(2)}`)
+        .join('\n');
+      const subtotal = cartItems.reduce((a, b) => a + b.product.price * b.quantity, 0);
+      const message = `👋 Hello Style & Class London! I'd like to place an order directly via WhatsApp:\n\n*Items in Bag:*\n${itemsText}\n\n*Subtotal: £${subtotal.toFixed(2)}*\nPlease provide payment and UK delivery confirmation!`;
+      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  // Order Completed - Permanently delete purchased items from website
+  const handleOrderSuccess = async (
+    order: Order,
+    whatsappUrl: string,
+    removedProducts: string[]
+  ) => {
+    setIsPayPalCheckoutOpen(false);
+    setIsCartOpen(false);
+    setCart([]);
+
+    // Get purchased product IDs
+    const purchasedIds = new Set(order.items.map((it) => it.productId));
+
+    // Save to localStorage as permanent record in browser
+    try {
+      const existing: string[] = JSON.parse(localStorage.getItem('styleandclass_sold_ids') || '[]');
+      const updated = Array.from(new Set([...existing, ...Array.from(purchasedIds)]));
+      localStorage.setItem('styleandclass_sold_ids', JSON.stringify(updated));
+    } catch (e) {}
+
+    // Instantly remove bought items from website products state
+    setProducts((prev) => prev.filter((p) => !purchasedIds.has(p.id)));
+
+    // If the product currently on detail view was purchased, update to archived/sold
+    setCurrentProduct((prev) => {
+      if (purchasedIds.has(prev.id)) {
+        return { ...prev, stock: 0, status: 'archived' };
+      }
+      return prev;
+    });
+
+    if (removedProducts && removedProducts.length > 0) {
+      setInventoryAlert(
+        `✓ "${removedProducts.join(', ')}" has been purchased & permanently deleted from the website!`
+      );
+    }
+
+    setSuccessOrderData({
+      order,
+      whatsappUrl,
+      removedProducts: removedProducts || []
+    });
+
+    await refreshData();
+  };
+
+  // Admin CRUD operations
+  const handleAddProduct = async (productData: Partial<Product>) => {
+    try {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData)
+      });
+      if (res.ok) {
+        await refreshData();
+      }
+    } catch (e) {
+      console.error('Error adding product:', e);
+    }
+  };
+
+  const handleUpdateProduct = async (id: string, updates: Partial<Product>) => {
+    try {
+      const res = await fetch(`/api/products/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+      if (res.ok) {
+        await refreshData();
+      }
+    } catch (e) {
+      console.error('Error updating product:', e);
+    }
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    try {
+      const res = await fetch(`/api/products/${id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        await refreshData();
+      }
+    } catch (e) {
+      console.error('Error deleting product:', e);
+    }
+  };
+
+  const handleUpdateSettings = async (newSettings: Partial<StoreSettings>) => {
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSettings)
+      });
+      if (res.ok) {
+        const text = await res.text();
+        if (text) {
+          try {
+            const data = JSON.parse(text);
+            if (data && data.settings) {
+              setSettings(data.settings);
+            }
+          } catch (jsonErr) {
+            console.warn('Failed to parse updated settings JSON:', jsonErr);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error updating settings:', e);
+    }
+  };
+
+  // Active products for public storefront
+  const activeProducts = products.filter((p) => p.status === 'active' && p.stock > 0);
+  const isCurrentProductSoldOut = currentProduct.stock <= 0 || currentProduct.status === 'archived';
+
+  // Active label view takes over full screen for distraction-free 4x6 printing
+  if (activePage === 'label') {
+    return (
+      <ShippingLabelView
+        order={selectedLabelOrder || orders[0] || null}
+        ordersList={orders}
+        onSelectOrder={(ord) => setSelectedLabelOrder(ord)}
+        onBack={() => {
+          setActivePage('home');
+          window.location.hash = '';
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#07080b] text-slate-100 flex flex-col font-sans antialiased selection:bg-[#d4a853] selection:text-black">
+      {/* Top Urgency & Announcement Bar */}
+      <AnnouncementBar
+        settings={settings}
+        currency={currency}
+        onCurrencyChange={setCurrency}
+      />
+
+      {/* Main Header with full Style And Class menus */}
+      <Header
+        activePage={activePage === 'detail' ? 'collections' : activePage}
+        selectedCategory={selectedCategory}
+        onNavigate={handleNavigate}
+        onOpenLegal={(policy) => setLegalPolicyType(policy)}
+        cartCount={cart.reduce((a, b) => a + b.quantity, 0)}
+        onOpenCart={() => setIsCartOpen(true)}
+        onOpenAdmin={handleRequestAdminAccess}
+        onSelectProduct={handleSelectProduct}
+        products={activeProducts}
+        merchantWhatsApp={settings.merchantWhatsApp}
+      />
+
+      {/* Inventory Automation Notification Banner */}
+      {inventoryAlert && (
+        <div className="bg-[#d4a853]/15 border-b border-[#d4a853]/30 text-[#f5c469] px-4 py-3 text-xs sm:text-sm font-semibold flex items-center justify-between">
+          <div className="max-w-7xl mx-auto flex items-center gap-2.5 w-full">
+            <CheckCircle2 className="w-4 h-4 text-[#d4a853] flex-shrink-0" />
+            <span>{inventoryAlert}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setInventoryAlert(null)}
+            className="text-slate-400 hover:text-white font-bold ml-2 p-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Dynamic Breadcrumbs */}
+      <div className="bg-[#090a0f] border-b border-slate-900">
+        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 w-full">
+          <ol className="flex items-center space-x-2 text-xs text-slate-400 font-medium">
+            <li>
+              <button
+                type="button"
+                onClick={() => handleNavigate('home')}
+                className="hover:text-[#d4a853] flex items-center gap-1.5 transition-colors"
+              >
+                <Home className="w-3.5 h-3.5 text-slate-400" />
+                <span>Home</span>
+              </button>
+            </li>
+
+            {activePage === 'collections' && (
+              <>
+                <li><ChevronRight className="w-3 h-3 text-slate-600" /></li>
+                <li className="font-bold text-white capitalize">
+                  {selectedCategory === 'all' ? 'All Items' : `${selectedCategory} Collection`}
+                </li>
+              </>
+            )}
+
+            {activePage === 'contact' && (
+              <>
+                <li><ChevronRight className="w-3 h-3 text-slate-600" /></li>
+                <li className="font-bold text-white">Customer Concierge &middot; Contact</li>
+              </>
+            )}
+
+            {activePage === 'detail' && (
+              <>
+                <li><ChevronRight className="w-3 h-3 text-slate-600" /></li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleNavigate('collections', currentProduct.collection || 'all')}
+                    className="hover:text-[#d4a853] transition-colors capitalize"
+                  >
+                    {currentProduct.collection || 'Catalog'}
+                  </button>
+                </li>
+                <li><ChevronRight className="w-3 h-3 text-slate-600" /></li>
+                <li className="font-bold text-white truncate max-w-[200px] sm:max-w-md">
+                  {currentProduct.title} ({currentProduct.code || currentProduct.sku})
+                </li>
+              </>
+            )}
+          </ol>
+        </nav>
+      </div>
+
+      {/* Main Content Area */}
+      <main className="flex-1 w-full">
+        {/* VIEW 1: HOME VIEW */}
+        {activePage === 'home' && (
+          <HomeView
+            products={products}
+            onSelectProduct={handleSelectProduct}
+            onAddToCart={handleAddToCartFromCard}
+            onQuickView={(p) => setQuickViewProduct(p)}
+            onNavigateCollections={(cat) => handleNavigate('collections', cat)}
+            settings={settings}
+          />
+        )}
+
+        {/* VIEW 2: COLLECTIONS / STORE CATALOG */}
+        {activePage === 'collections' && (
+          <StoreCatalog
+            products={products}
+            currentProduct={currentProduct}
+            onSelectProduct={handleSelectProduct}
+            onAddToCart={handleAddToCartFromCard}
+            onQuickView={(p) => setQuickViewProduct(p)}
+            settings={settings}
+            selectedCategory={selectedCategory}
+            onCategoryChange={(cat) => setSelectedCategory(cat)}
+          />
+        )}
+
+        {/* VIEW 3: CONTACT VIEW */}
+        {activePage === 'contact' && (
+          <ContactView
+            settings={settings}
+            onNavigateHome={() => handleNavigate('home')}
+            onNavigateCollections={() => handleNavigate('collections', 'all')}
+          />
+        )}
+
+        {/* VIEW 4: PRODUCT DETAIL SHOWCASE */}
+        {activePage === 'detail' && (
+          <div id="product-showcase" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 space-y-16">
+            {isCurrentProductSoldOut ? (
+              <div className="p-8 my-6 bg-[#0e1017] border-2 border-dashed border-[#d4a853]/40 rounded-3xl text-center space-y-3">
+                <AlertCircle className="w-12 h-12 text-[#d4a853] mx-auto" />
+                <h2 className="text-xl sm:text-2xl font-black text-white font-serif">
+                  This 1-of-1 Item Was Purchased &amp; Removed
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto">
+                  In accordance with Style &amp; Class inventory rules, when a unique pre-loved garment is purchased, it is immediately archived so nobody else can buy it.
+                </p>
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => handleNavigate('collections', 'all')}
+                    className="px-6 py-2.5 bg-[#d4a853] text-black font-extrabold text-xs rounded-xl"
+                  >
+                    View Available Pieces
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+                {/* Left Column: Image Gallery */}
+                <div className="lg:col-span-7">
+                  <ProductGallery
+                    images={currentProduct.images}
+                    title={currentProduct.title}
+                    activeImageIndex={activeImageIndex}
+                    onSelectImage={setActiveImageIndex}
+                  />
+                </div>
+
+                {/* Right Column: Buy Box & Product Info */}
+                <div className="lg:col-span-5">
+                  <ProductInfo
+                    product={currentProduct}
+                    selectedColor={selectedColor}
+                    onSelectColor={handleSelectColor}
+                    selectedSize={selectedSize}
+                    onSelectSize={setSelectedSize}
+                    quantity={quantity}
+                    onQuantityChange={setQuantity}
+                    onAddToCart={handleAddToCart}
+                    onBuyWithPayPal={handleBuyWithPayPalDirect}
+                    onBuyWithCard={handleBuyWithCardDirect}
+                    onOrderViaWhatsApp={handleOrderViaWhatsAppDirect}
+                    onOpenSizeGuide={() => setIsSizeGuideOpen(true)}
+                    currencySymbol={settings.currencySymbol || '£'}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Technical Specs, Description, and Verified Reviews */}
+            <div id="features-section">
+              <ProductTabs
+                product={currentProduct}
+                currencySymbol={settings.currencySymbol || '£'}
+              />
+            </div>
+
+            {/* Related Products Section */}
+            <RelatedProducts
+              products={activeProducts}
+              currentProductId={currentProduct.id}
+              onSelectProduct={handleSelectProduct}
+              currencySymbol={settings.currencySymbol || '£'}
+            />
+          </div>
+        )}
+      </main>
+
+      {/* Floating Social Proof Toast */}
+      <SocialProofToast />
+
+      {/* Floating Persistent WhatsApp Action Button */}
+      <FloatingWhatsAppButton
+        settings={settings}
+        currentProduct={activePage === 'detail' ? currentProduct : null}
+        activePage={activePage}
+        hasStickyBar={activePage === 'detail' && !isCurrentProductSoldOut}
+      />
+
+      {/* Floating Left-Side Jump to Top Button */}
+      <ScrollToTopButton
+        hasStickyBar={activePage === 'detail' && !isCurrentProductSoldOut}
+      />
+
+      {/* Sticky Bottom Add-To-Cart Bar (active during detail view) */}
+      {activePage === 'detail' && !isCurrentProductSoldOut && (
+        <StickyAddToCart
+          product={currentProduct}
+          selectedColor={selectedColor}
+          selectedSize={selectedSize}
+          onSelectSize={setSelectedSize}
+          onAddToCart={handleAddToCart}
+          onBuyWithPayPal={handleBuyWithPayPalDirect}
+          currencySymbol={settings.currencySymbol || '£'}
+        />
+      )}
+
+      {/* Quick View Modal */}
+      <QuickViewModal
+        product={quickViewProduct}
+        isOpen={!!quickViewProduct}
+        onClose={() => setQuickViewProduct(null)}
+        onAddToCart={(p, sz) => {
+          handleAddToCartFromCard(p, sz);
+          setQuickViewProduct(null);
+        }}
+        onBuyNowWithPayPal={(p, sz) => {
+          setCart([
+            {
+              product: p,
+              selectedColor: p.colors[0]?.name || 'Standard',
+              selectedSize: sz || p.sizes[0] || 'Standard',
+              quantity: 1
+            }
+          ]);
+          setQuickViewProduct(null);
+          setIsPayPalCheckoutOpen(true);
+        }}
+        onOrderViaWhatsApp={(p) => {
+          setQuickViewProduct(null);
+          handleOrderViaWhatsAppDirect(p);
+        }}
+        settings={settings}
+      />
+
+      {/* Legal Modal (Terms & Conditions, Privacy Policy, Cookie Policy) */}
+      <LegalModal
+        policyType={legalPolicyType}
+        onClose={() => setLegalPolicyType(null)}
+      />
+
+      {/* Cart Drawer */}
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        items={cart}
+        onUpdateQuantity={handleUpdateQuantity}
+        onRemoveItem={handleRemoveCartItem}
+        onCheckoutPayPal={(carrier) => {
+          if (carrier) setCheckoutCarrier(carrier);
+          setCheckoutInitialPaymentMethod('paypal');
+          setIsCartOpen(false);
+          setIsPayPalCheckoutOpen(true);
+        }}
+        onCheckoutCard={(carrier) => {
+          if (carrier) setCheckoutCarrier(carrier);
+          setCheckoutInitialPaymentMethod('card');
+          setIsCartOpen(false);
+          setIsPayPalCheckoutOpen(true);
+        }}
+        onCheckoutWhatsApp={handleCheckoutWhatsAppFromCart}
+        currencySymbol={settings.currencySymbol || '£'}
+      />
+
+      {/* PayPal UK & Debit/Credit Card Checkout Modal */}
+      <PayPalCheckoutModal
+        isOpen={isPayPalCheckoutOpen}
+        onClose={() => setIsPayPalCheckoutOpen(false)}
+        items={cart}
+        currencySymbol={settings.currencySymbol || '£'}
+        paypalClientId={settings.paypalClientId}
+        merchantWhatsApp={settings.merchantWhatsApp}
+        initialCarrier={checkoutCarrier}
+        initialPaymentMethod={checkoutInitialPaymentMethod}
+        onInstantDelete={(ids) => {
+          const toDelete = new Set(ids);
+          setProducts((prev) => prev.filter((p) => !toDelete.has(p.id)));
+          setCurrentProduct((prev) => {
+            if (toDelete.has(prev.id)) {
+              const remaining = products.filter((p) => !toDelete.has(p.id) && p.stock > 0);
+              return remaining[0] || prev;
+            }
+            return prev;
+          });
+        }}
+        onOrderSuccess={handleOrderSuccess}
+      />
+
+      {/* Order Confirmation Modal with WhatsApp Direct Dispatch Link */}
+      <OrderSuccessModal
+        order={successOrderData?.order || null}
+        whatsappUrl={successOrderData?.whatsappUrl || ''}
+        removedProducts={successOrderData?.removedProducts || []}
+        onClose={() => setSuccessOrderData(null)}
+        currencySymbol={settings.currencySymbol || '£'}
+        onOpenLabel={(ord) => {
+          setSelectedLabelOrder(ord);
+          setActivePage('label');
+          window.location.hash = `#label-${ord.id}`;
+        }}
+      />
+
+      {/* Size Guide Modal */}
+      <SizeGuideModal
+        isOpen={isSizeGuideOpen}
+        onClose={() => setIsSizeGuideOpen(false)}
+        selectedSize={selectedSize}
+        onSelectSize={setSelectedSize}
+      />
+
+      {/* Store Database & Admin Manager Modal */}
+      <AdminModal
+        isOpen={isAdminOpen}
+        onClose={() => setIsAdminOpen(false)}
+        products={products}
+        orders={orders}
+        settings={settings}
+        onAddProduct={handleAddProduct}
+        onUpdateProduct={handleUpdateProduct}
+        onDeleteProduct={handleDeleteProduct}
+        onUpdateSettings={handleUpdateSettings}
+        onRefreshData={refreshData}
+        currencySymbol={settings.currencySymbol || '£'}
+        onOpenLabel={(ord) => {
+          setIsAdminOpen(false);
+          setSelectedLabelOrder(ord);
+          setActivePage('label');
+          window.location.hash = `#label-${ord.id}`;
+        }}
+      />
+
+      {/* Security Gate / Password Protection Modal for Store Brain */}
+      <AdminPasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+        onSuccess={handleAdminPasswordSuccess}
+      />
+
+      {/* Footer with full navigation, social links, legal modals, and support */}
+      <Footer
+        onOpenAdmin={handleRequestAdminAccess}
+        settings={settings}
+        onNavigate={handleNavigate}
+        onOpenLegal={(policy) => setLegalPolicyType(policy)}
+      />
+    </div>
+  );
+}
