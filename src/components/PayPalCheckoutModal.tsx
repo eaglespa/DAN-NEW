@@ -359,12 +359,6 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
       const directPayPalUrl = order.paypalCheckoutUrl || data?.paypalCheckoutUrl || fallbackPayPalUrl;
       order.paypalCheckoutUrl = directPayPalUrl;
 
-      try {
-        window.open(directPayPalUrl, '_blank');
-      } catch (paypalPopupErr) {
-        console.warn('PayPal checkout popup blocked by browser:', paypalPopupErr);
-      }
-
       if (whatsappUrl) {
         try {
           window.open(whatsappUrl, '_blank');
@@ -378,6 +372,16 @@ Style And Class London · Sustainable Pre-Loved Luxury`;
         whatsappUrl,
         removedFromStoreProducts
       );
+
+      // CRITICAL REQUIREMENT: Direct unblockable navigation to PayPal Live Gateway
+      // Ensures PayPal receives transaction details and opens 100% reliably without being stopped by browser popup blockers!
+      setTimeout(() => {
+        try {
+          window.location.href = directPayPalUrl;
+        } catch (navErr) {
+          console.warn('Navigation to PayPal fallback:', navErr);
+        }
+      }, 800);
     } catch (err: any) {
       setIsProcessing(false);
       setErrorMessage(err.message || 'An error occurred during checkout.');

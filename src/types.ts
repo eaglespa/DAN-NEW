@@ -20,7 +20,7 @@ export interface Product {
   rating: number;
   reviewCount: number;
   stock: number;
-  status: 'active' | 'archived';
+  status: 'active' | 'archived' | 'sold';
   description: string;
   bulletPoints: string[];
   specifications: { [key: string]: string };

@@ -341,10 +341,16 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
                       </span>
                     )}
 
-                    {/* 1 of 1 Badge */}
-                    <span className="bg-red-500/90 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-sm uppercase tracking-wider flex items-center gap-1">
-                      <span>1 OF 1 ONLY</span>
-                    </span>
+                    {/* Sold Badge if sold */}
+                    {product.stock <= 0 || product.status === 'sold' || product.status === 'archived' ? (
+                      <span className="bg-red-600 text-white text-[10.5px] font-black px-2.5 py-0.5 rounded shadow-sm uppercase tracking-wider animate-pulse">
+                        SOLD
+                      </span>
+                    ) : (
+                      <span className="bg-red-500/90 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-sm uppercase tracking-wider flex items-center gap-1">
+                        <span>1 OF 1 ONLY</span>
+                      </span>
+                    )}
 
                     {/* Condition Badge */}
                     {product.condition && (
@@ -450,19 +456,25 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
                       </span>
                     </div>
 
-                    {/* Add to Cart Button */}
-                    <motion.button
-                      id={`card-add-to-bag-${product.id}`}
-                      type="button"
-                      whileHover={{ scale: 1.08 }}
-                      whileTap={{ scale: 0.92 }}
-                      onClick={() => onAddToCart(product)}
-                      className="bg-[#d4a853] hover:bg-[#e8c97a] text-black p-2.5 rounded-xl transition-colors shadow-md flex items-center gap-1.5 text-xs font-extrabold cursor-pointer"
-                      title="Add this 1-of-1 piece to your shopping bag"
-                    >
-                      <ShoppingBag className="w-4 h-4" />
-                      <span className="hidden xs:inline">Add</span>
-                    </motion.button>
+                    {/* Add to Cart Button or SOLD Badge */}
+                    {product.stock <= 0 || product.status === 'sold' || product.status === 'archived' ? (
+                      <span className="bg-red-950/80 text-red-400 border border-red-800/80 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider">
+                        SOLD
+                      </span>
+                    ) : (
+                      <motion.button
+                        id={`card-add-to-bag-${product.id}`}
+                        type="button"
+                        whileHover={{ scale: 1.08 }}
+                        whileTap={{ scale: 0.92 }}
+                        onClick={() => onAddToCart(product)}
+                        className="bg-[#d4a853] hover:bg-[#e8c97a] text-black p-2.5 rounded-xl transition-colors shadow-md flex items-center gap-1.5 text-xs font-extrabold cursor-pointer"
+                        title="Add this 1-of-1 piece to your shopping bag"
+                      >
+                        <ShoppingBag className="w-4 h-4" />
+                        <span className="hidden xs:inline">Add</span>
+                      </motion.button>
+                    )}
                   </div>
                 </div>
               </motion.div>

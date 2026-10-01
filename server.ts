@@ -25,6 +25,7 @@ const DATA_DIR = path.join(process.cwd(), "data");
 const PRODUCTS_FILE = path.join(DATA_DIR, "products.json");
 const ORDERS_FILE = path.join(DATA_DIR, "orders.json");
 const SETTINGS_FILE = path.join(DATA_DIR, "settings.json");
+const SOLD_FILE = path.join(DATA_DIR, "sold_products.json");
 
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -33,6 +34,25 @@ if (!fs.existsSync(DATA_DIR)) {
 let products: Product[] = [];
 let orders: Order[] = [];
 let settings: StoreSettings = { ...INITIAL_SETTINGS };
+let soldProductIds: Set<string> = new Set();
+
+// Load sold product IDs
+try {
+  if (fs.existsSync(SOLD_FILE)) {
+    const list = JSON.parse(fs.readFileSync(SOLD_FILE, "utf-8"));
+    soldProductIds = new Set(Array.isArray(list) ? list : []);
+  }
+} catch (e) {
+  console.warn("Failed to load sold products file:", e);
+}
+
+const persistSoldProducts = () => {
+  try {
+    fs.writeFileSync(SOLD_FILE, JSON.stringify(Array.from(soldProductIds), null, 2));
+  } catch (e) {
+    console.error("Failed to persist sold products file:", e);
+  }
+};
 
 // Load or initialize data
 try {
@@ -46,6 +66,9 @@ try {
   console.warn("Failed to load products file, using initial data:", e);
   products = [...INITIAL_PRODUCTS];
 }
+
+// Remove any sold products from active catalog
+products = products.filter((p) => !soldProductIds.has(p.id));
 
 try {
   if (fs.existsSync(ORDERS_FILE)) {
@@ -171,7 +194,9 @@ app.get("/api/health", (req, res) => {
 // GET products (filtered by active for store; or ?all=true for admin; supports ?limit=&page=&category=)
 app.get("/api/products", (req, res) => {
   const showAll = req.query.all === "true";
-  let result = showAll ? products : products.filter((p) => p.status === "active" && p.stock > 0);
+  let result = showAll 
+    ? products.filter((p) => !soldProductIds.has(p.id))
+    : products.filter((p) => p.status === "active" && p.stock > 0 && !soldProductIds.has(p.id));
 
   const category = typeof req.query.category === 'string' ? req.query.category.toLowerCase() : '';
   if (category && category !== 'all') {
@@ -194,8 +219,14 @@ app.get("/api/products", (req, res) => {
 // GET single product by id or slug
 app.get("/api/products/:id", (req, res) => {
   const { id } = req.params;
-  let product = products.find((p) => p.id === id || p.slug === id);
-  if (!product) {
+  if (soldProductIds.has(id)) {
+    const soldItem = INITIAL_PRODUCTS.find((p) => p.id === id || p.slug === id);
+    if (soldItem) {
+      return res.json({ ...soldItem, stock: 0, status: "sold" });
+    }
+  }
+  let product = products.find((p) => (p.id === id || p.slug === id) && !soldProductIds.has(p.id));
+  if (!product && !soldProductIds.has(id)) {
     product = INITIAL_PRODUCTS.find((p) => p.id === id || p.slug === id);
   }
   if (!product) {
@@ -297,9 +328,17 @@ app.post("/api/orders", async (req, res) => {
 
     // Verify and process stock for each item
     for (const item of items) {
-      let product = products.find((p) => p.id === item.productId);
-      if (!product) {
-        // Fallback: check INITIAL_PRODUCTS if not found in active products
+      if (soldProductIds.has(item.productId)) {
+        const itemTitle = item.productTitle || item.title || item.productId;
+        return res.status(400).json({
+          success: false,
+          error: `Sorry, this 1-of-1 pre-loved piece ("${itemTitle}") has already been purchased & removed from the store!`
+        });
+      }
+
+      let product = products.find((p) => p.id === item.productId && !soldProductIds.has(p.id));
+      if (!product && !soldProductIds.has(item.productId)) {
+        // Fallback: check INITIAL_PRODUCTS only if NEVER marked as sold
         const fallback = INITIAL_PRODUCTS.find((p) => p.id === item.productId);
         if (fallback) {
           product = { ...fallback };
@@ -345,9 +384,12 @@ app.post("/api/orders", async (req, res) => {
       console.log(`[STORE INVENTORY] Product "${product.title}" (${product.code || product.sku}) bought & paid. Deleted completely from website.`);
     }
 
-    // Permanently remove all purchased items from active store products
+    // Permanently remove all purchased items from active store products and record in soldProductIds
     const purchasedProductIds = new Set(orderedItems.map((it) => it.productId));
-    products = products.filter((p) => !purchasedProductIds.has(p.id));
+    purchasedProductIds.forEach((id) => soldProductIds.add(id));
+    persistSoldProducts();
+
+    products = products.filter((p) => !soldProductIds.has(p.id));
     persistProducts();
 
     // Carrier selection support: Evri (£2.60), InPost (£2.89), Royal Mail (£3.65)
@@ -537,10 +579,13 @@ ${photosList}
 ⏱️ Tracked Delivery: ${chosenCarrier.time}
 ----------------------------------------${removalNotice}
 
+💳 *DIRECT PAYPAL PAYMENT / TRANSACTION LINK:*
+${paypalCheckoutUrl}
+
 🏷️ *PRINT 4×6 THERMAL SHIPPING LABEL:*
 ${host}/#label-${order.id}
 
-Style And Class London &middot; Sustainable Pre-Loved Luxury`;
+Style And Class London · Sustainable Pre-Loved Luxury`;
 
     const cleanMerchantPhone = String(settings.merchantWhatsApp || "+447591878215").replace(/[^0-9]/g, "");
     const whatsappUrl = `https://wa.me/${cleanMerchantPhone}?text=${encodeURIComponent(whatsappMessage)}`;
@@ -548,6 +593,7 @@ Style And Class London &middot; Sustainable Pre-Loved Luxury`;
     res.status(201).json({
       success: true,
       order,
+      paypalCheckoutUrl,
       whatsappUrl,
       whatsappMessage,
       addressQrUrl,

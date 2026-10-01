@@ -48,7 +48,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [formCollection, setFormCollection] = useState<'women' | 'men' | 'kids' | 'accessories'>('women');
   const [formImageUrl, setFormImageUrl] = useState('https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=800&q=80');
   const [formDescription, setFormDescription] = useState('Pre-loved designer garment in excellent condition.');
-  const [formStatus, setFormStatus] = useState<'active' | 'archived'>('active');
+  const [formStatus, setFormStatus] = useState<'active' | 'archived' | 'sold'>('active');
   const [formSizes, setFormSizes] = useState('UK 10');
   const [formColors, setFormColors] = useState('Navy Blue');
 

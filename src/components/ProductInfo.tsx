@@ -218,56 +218,68 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
       </div>
 
       {/* CTA Buttons: Add to Bag, Card, PayPal UK, and WhatsApp */}
-      <div className="flex flex-col gap-2.5 pt-2">
-        {/* Primary Add to Cart Button */}
-        <button
-          id="product-add-to-bag-btn"
-          type="button"
-          onClick={onAddToCart}
-          className="w-full py-4 px-6 rounded-2xl bg-[#d4a853] hover:bg-[#e8c97a] text-black font-extrabold text-sm sm:text-base tracking-wide shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
-        >
-          <span>ADD TO SHOPPING BAG</span>
-          <span>&bull;</span>
-          <span>{currencySymbol}{product.price.toFixed(2)}</span>
-        </button>
-
-        {/* Dual Instant Checkout Buttons: Card & PayPal */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {/* Instant Buy with Debit/Credit Card */}
+      {product.stock <= 0 || product.status === 'archived' || product.status === 'sold' ? (
+        <div className="p-5 rounded-2xl bg-red-950/40 border-2 border-red-600/50 text-center space-y-2.5 my-2">
+          <div className="inline-flex items-center gap-2 bg-red-600 text-white text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-md">
+            <span>●</span>
+            <span>SOLD OUT · 1-OF-1 PIECE</span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-300 font-medium">
+            This unique pre-loved piece has been purchased and permanently removed from our active inventory.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2.5 pt-2">
+          {/* Primary Add to Cart Button */}
           <button
-            id="product-card-buy-btn"
+            id="product-add-to-bag-btn"
             type="button"
-            onClick={onBuyWithCard || onBuyWithPayPal}
-            className="w-full py-3.5 px-4 rounded-2xl bg-[#181b28] hover:bg-[#202538] text-white font-bold text-xs sm:text-sm tracking-wide border border-[#d4a853]/60 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-md"
+            onClick={onAddToCart}
+            className="w-full py-4 px-6 rounded-2xl bg-[#d4a853] hover:bg-[#e8c97a] text-black font-extrabold text-sm sm:text-base tracking-wide shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
           >
-            <CreditCard className="w-4 h-4 text-[#d4a853]" />
-            <span>Pay with Card</span>
+            <span>ADD TO SHOPPING BAG</span>
+            <span>&bull;</span>
+            <span>{currencySymbol}{product.price.toFixed(2)}</span>
           </button>
 
-          {/* Instant Buy with PayPal UK Button */}
+          {/* Dual Instant Checkout Buttons: Card & PayPal */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {/* Instant Buy with Debit/Credit Card */}
+            <button
+              id="product-card-buy-btn"
+              type="button"
+              onClick={onBuyWithCard || onBuyWithPayPal}
+              className="w-full py-3.5 px-4 rounded-2xl bg-[#181b28] hover:bg-[#202538] text-white font-bold text-xs sm:text-sm tracking-wide border border-[#d4a853]/60 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-md"
+            >
+              <CreditCard className="w-4 h-4 text-[#d4a853]" />
+              <span>Pay with Card</span>
+            </button>
+
+            {/* Instant Buy with PayPal UK Button */}
+            <button
+              id="product-paypal-buy-btn"
+              type="button"
+              onClick={onBuyWithPayPal}
+              className="w-full py-3.5 px-4 rounded-2xl bg-[#ffc439] hover:bg-[#ffb000] text-[#003087] font-black text-xs sm:text-sm tracking-wide shadow-md transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>Buy with</span>
+              <span className="italic font-black text-[#003087]">Pay</span>
+              <span className="italic font-black text-[#0079c1] -ml-1">Pal</span>
+            </button>
+          </div>
+
+          {/* WhatsApp Direct Order Button */}
           <button
-            id="product-paypal-buy-btn"
+            id="product-whatsapp-order-btn"
             type="button"
-            onClick={onBuyWithPayPal}
-            className="w-full py-3.5 px-4 rounded-2xl bg-[#ffc439] hover:bg-[#ffb000] text-[#003087] font-black text-xs sm:text-sm tracking-wide shadow-md transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+            onClick={onOrderViaWhatsApp}
+            className="w-full py-3.5 px-6 rounded-2xl bg-[#25D366] hover:bg-[#20ba5a] text-black font-extrabold text-sm tracking-wide shadow-md transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span>Buy with</span>
-            <span className="italic font-black text-[#003087]">Pay</span>
-            <span className="italic font-black text-[#0079c1] -ml-1">Pal</span>
+            <MessageCircle className="w-4 h-4 fill-black text-black" />
+            <span>Order via WhatsApp (+44 7591 878215)</span>
           </button>
         </div>
-
-        {/* WhatsApp Direct Order Button */}
-        <button
-          id="product-whatsapp-order-btn"
-          type="button"
-          onClick={onOrderViaWhatsApp}
-          className="w-full py-3.5 px-6 rounded-2xl bg-[#25D366] hover:bg-[#20ba5a] text-black font-extrabold text-sm tracking-wide shadow-md transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
-        >
-          <MessageCircle className="w-4 h-4 fill-black text-black" />
-          <span>Order via WhatsApp (+44 7591 878215)</span>
-        </button>
-      </div>
+      )}
 
       {/* Trust Badges Stack */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-[11px] text-slate-400">

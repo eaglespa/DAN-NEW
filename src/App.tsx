@@ -319,27 +319,152 @@ export default function App() {
   };
 
   // Direct WhatsApp Order Button on Product Page
-  const handleOrderViaWhatsAppDirect = () => {
-    const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9+]/g, '').replace('+', '');
-    const message = `👋 Hello Style & Class London! I want to order the:\n\n👗 *${currentProduct.title}* [${currentProduct.code || currentProduct.sku || '1-of-1'}]\nBrand: ${currentProduct.brand || 'Designer'}\nSize: ${selectedSize}\nQuantity: ${quantity}\nPrice: £${(currentProduct.price * quantity).toFixed(2)}\n\nPlease assist me with quick UK delivery checkout!`;
-    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+  const handleOrderViaWhatsAppDirect = async () => {
+    if (currentProduct.stock <= 0 || currentProduct.status === 'archived') {
+      alert('This 1-of-1 piece has already been purchased and removed from the store.');
+      return;
+    }
+
+    const boughtId = currentProduct.id;
+    const boughtTitle = currentProduct.title;
+
+    // Immediately mark as sold out & remove from active store
+    setProducts((prev) => prev.filter((p) => p.id !== boughtId));
+    setCurrentProduct((prev) => ({
+      ...prev,
+      stock: 0,
+      status: 'archived'
+    }));
+
+    setInventoryAlert(`✓ "${boughtTitle}" has been purchased & permanently removed from the website!`);
+
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          carrier: 'evri',
+          items: [
+            {
+              productId: currentProduct.id,
+              productTitle: currentProduct.title,
+              quantity,
+              color: selectedColor,
+              size: selectedSize,
+              image: currentProduct.images[0] || ''
+            }
+          ],
+          customer: {
+            fullName: 'WhatsApp Customer',
+            phone: settings.merchantWhatsApp || '+447591878215',
+            address: 'Direct WhatsApp Customer UK',
+            city: 'London',
+            postcode: 'UK'
+          },
+          paymentMethod: 'whatsapp',
+          notes: 'Customer ordered directly via WhatsApp button'
+        })
+      });
+
+      const data = await response.json();
+      const whatsappUrl = data?.whatsappUrl;
+      const order = data?.order;
+
+      if (whatsappUrl) {
+        window.open(whatsappUrl, '_blank');
+      } else {
+        const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9+]/g, '').replace('+', '');
+        const message = `👋 Hello Style & Class London! I want to order the:\n\n👗 *${currentProduct.title}* [${currentProduct.code || currentProduct.sku || '1-of-1'}]\nBrand: ${currentProduct.brand || 'Designer'}\nSize: ${selectedSize}\nQuantity: ${quantity}\nPrice: £${(currentProduct.price * quantity).toFixed(2)}\n\nPlease assist me with quick UK delivery checkout!`;
+        window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
+      }
+
+      if (order) {
+        setSuccessOrderData({
+          order,
+          whatsappUrl: whatsappUrl || '',
+          removedProducts: [boughtTitle]
+        });
+      }
+    } catch (e) {
+      console.warn('Backend order recording error:', e);
+      const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9+]/g, '').replace('+', '');
+      const message = `👋 Hello Style & Class London! I want to order the:\n\n👗 *${currentProduct.title}* [${currentProduct.code || currentProduct.sku || '1-of-1'}]\nBrand: ${currentProduct.brand || 'Designer'}\nSize: ${selectedSize}\nQuantity: ${quantity}\nPrice: £${(currentProduct.price * quantity).toFixed(2)}\n\nPlease assist me with quick UK delivery checkout!`;
+      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
+    }
   };
 
   // WhatsApp Order from Cart Drawer
-  const handleCheckoutWhatsAppFromCart = () => {
+  const handleCheckoutWhatsAppFromCart = async () => {
     if (cart.length === 0) return;
-    const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9+]/g, '').replace('+', '');
-    const itemsText = cart
-      .map(
-        (it) => `• ${it.product.title} [${it.product.code || it.product.sku || '1-of-1'}] (${it.selectedSize}) x${it.quantity} - £${(it.product.price * it.quantity).toFixed(2)}`
-      )
-      .join('\n');
-    const subtotal = cart.reduce((a, b) => a + b.product.price * b.quantity, 0);
 
-    const message = `👋 Hello Style & Class London! I'd like to place an order directly via WhatsApp:\n\n*Items in Bag:*\n${itemsText}\n\n*Subtotal: £${subtotal.toFixed(2)}*\nPlease provide payment and UK delivery confirmation!`;
-    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+    const boughtIds = new Set(cart.map((it) => it.product.id));
+    const boughtTitles = cart.map((it) => it.product.title);
+    const cartItems = [...cart];
+
+    // Immediately remove bought items from website products state and empty cart
+    setProducts((prev) => prev.filter((p) => !boughtIds.has(p.id)));
+    setCurrentProduct((prev) => {
+      if (boughtIds.has(prev.id)) {
+        return { ...prev, stock: 0, status: 'archived' };
+      }
+      return prev;
+    });
+    setCart([]);
+    setIsCartOpen(false);
+
+    setInventoryAlert(`✓ "${boughtTitles.join(', ')}" purchased & permanently removed from the website!`);
+
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          carrier: 'evri',
+          items: cartItems.map((it) => ({
+            productId: it.product.id,
+            productTitle: it.product.title,
+            quantity: it.quantity,
+            color: it.selectedColor,
+            size: it.selectedSize,
+            image: it.product.images[0] || ''
+          })),
+          customer: {
+            fullName: 'WhatsApp Customer',
+            phone: settings.merchantWhatsApp || '+447591878215',
+            address: 'Direct WhatsApp Customer UK',
+            city: 'London',
+            postcode: 'UK'
+          },
+          paymentMethod: 'whatsapp',
+          notes: 'Customer placed order directly via WhatsApp bag'
+        })
+      });
+
+      const data = await response.json();
+      const whatsappUrl = data?.whatsappUrl;
+      const order = data?.order;
+
+      if (whatsappUrl) {
+        window.open(whatsappUrl, '_blank');
+      }
+
+      if (order) {
+        setSuccessOrderData({
+          order,
+          whatsappUrl: whatsappUrl || '',
+          removedProducts: boughtTitles
+        });
+      }
+    } catch (e) {
+      console.warn('Backend order recording error from cart:', e);
+      const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9+]/g, '').replace('+', '');
+      const itemsText = cartItems
+        .map((it) => `• ${it.product.title} [${it.product.code || it.product.sku || '1-of-1'}] (${it.selectedSize}) x${it.quantity} - £${(it.product.price * it.quantity).toFixed(2)}`)
+        .join('\n');
+      const subtotal = cartItems.reduce((a, b) => a + b.product.price * b.quantity, 0);
+      const message = `👋 Hello Style & Class London! I'd like to place an order directly via WhatsApp:\n\n*Items in Bag:*\n${itemsText}\n\n*Subtotal: £${subtotal.toFixed(2)}*\nPlease provide payment and UK delivery confirmation!`;
+      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
+    }
   };
 
   // Order Completed - Permanently delete purchased items from website
@@ -358,11 +483,10 @@ export default function App() {
     // Instantly remove bought items from website products state
     setProducts((prev) => prev.filter((p) => !purchasedIds.has(p.id)));
 
-    // If the product currently on detail view was purchased, switch to next available piece
+    // If the product currently on detail view was purchased, update to archived/sold
     setCurrentProduct((prev) => {
       if (purchasedIds.has(prev.id)) {
-        const remaining = products.filter((p) => !purchasedIds.has(p.id) && p.stock > 0);
-        return remaining[0] || prev;
+        return { ...prev, stock: 0, status: 'archived' };
       }
       return prev;
     });
