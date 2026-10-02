@@ -1,9 +1,9 @@
 import React from 'react';
-import { ShieldCheck, MessageCircle, Truck, RefreshCw, Database, Phone, Mail, MapPin, Instagram, Video, Share2, FileText, Lock, Cookie, ArrowUpRight } from 'lucide-react';
+import { ShieldCheck, MessageCircle, Truck, RefreshCw, Phone, Mail, MapPin, Instagram, Video, Share2, FileText, Lock, Cookie, ArrowUpRight } from 'lucide-react';
 import { StoreSettings } from '../types';
 
 interface FooterProps {
-  onOpenAdmin: () => void;
+  onOpenAdmin?: () => void;
   settings: StoreSettings;
   onNavigate: (page: 'home' | 'collections' | 'contact', category?: string) => void;
   onOpenLegal: (policy: 'terms' | 'privacy' | 'cookie') => void;
@@ -251,18 +251,6 @@ export const Footer: React.FC<FooterProps> = ({
                 </button>
               </li>
             </ul>
-
-            <div className="pt-3 flex flex-col gap-2">
-              <button
-                id="footer-open-admin-btn"
-                type="button"
-                onClick={onOpenAdmin}
-                className="px-3 py-2 bg-[#181a24] hover:bg-[#202330] text-[#f5c469] text-xs font-bold rounded-xl flex items-center gap-2 border border-[#d4a853]/40 transition-all shadow-sm"
-              >
-                <Database className="w-3.5 h-3.5 text-[#d4a853]" />
-                <span>Store Database &amp; Admin</span>
-              </button>
-            </div>
           </div>
         </div>
 

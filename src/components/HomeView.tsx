@@ -276,7 +276,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
             <h3 className="text-base font-bold text-white font-serif">Curated Quality</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Each piece is individually inspected, steam-pressed, and hand-selected for its pristine character and durability.
+              Each piece is individually inspected, and hand-selected for its pristine character and durability.
             </p>
           </div>
 

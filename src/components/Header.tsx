@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingBag, Search, Database, MessageCircle, Menu, X, Phone, Home, LayoutGrid, Mail, ChevronDown, Sparkles, FileText, Shield, Cookie } from 'lucide-react';
+import { ShoppingBag, Database, MessageCircle, Menu, X, Phone, Home, LayoutGrid, Mail, ChevronDown, Sparkles, FileText, Shield, Cookie } from 'lucide-react';
 import { Product } from '../types';
 
 interface HeaderProps {
@@ -28,18 +28,7 @@ export const Header: React.FC<HeaderProps> = ({
   merchantWhatsApp
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [collectionsDropdownOpen, setCollectionsDropdownOpen] = useState(false);
-
-  const filteredProducts = searchQuery.trim()
-    ? products.filter(p =>
-        p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.brand?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.category.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : [];
 
   const cleanPhone = merchantWhatsApp.replace(/[^0-9+]/g, '').replace('+', '');
   const waHelpUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent('Hi Style & Class London, I have a question about your pre-loved collections.')}`;
@@ -198,18 +187,6 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Mail className="w-4 h-4" />
               <span>Contact</span>
-            </button>
-
-            {/* Quick Search Button */}
-            <button
-              id="header-search-btn"
-              type="button"
-              onClick={() => setSearchOpen(true)}
-              className="p-2 text-slate-300 hover:text-[#d4a853] rounded-xl hover:bg-slate-800/60 transition-colors"
-              aria-label="Search Catalog"
-              title="Search catalog"
-            >
-              <Search className="w-5 h-5" />
             </button>
 
             {/* Admin Console Trigger */}
@@ -417,88 +394,6 @@ export const Header: React.FC<HeaderProps> = ({
               <p className="text-[11px] text-center text-slate-500 font-mono">
                 UK Tracked Dispatches &middot; London
               </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Global Quick Search Modal */}
-      {searchOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start justify-center pt-20 px-4">
-          <div className="bg-[#0e1017] border border-[#d4a853]/40 rounded-2xl w-full max-w-2xl shadow-2xl p-6 text-slate-200 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <div className="flex items-center gap-3 flex-1">
-                <Search className="w-5 h-5 text-[#d4a853]" />
-                <input
-                  type="text"
-                  autoFocus
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by designer, garment code (e.g. BOX 1 -1), size or category..."
-                  className="w-full bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchOpen(false);
-                  setSearchQuery('');
-                }}
-                className="p-1 text-slate-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Results */}
-            <div className="mt-4 max-h-96 overflow-y-auto divide-y divide-slate-800/60">
-              {searchQuery.trim() === '' ? (
-                <div className="py-8 text-center text-xs text-slate-500">
-                  Type to search across Women, Men, Kids, and Accessories.
-                </div>
-              ) : filteredProducts.length === 0 ? (
-                <div className="py-8 text-center text-xs text-slate-400">
-                  No items found matching &quot;{searchQuery}&quot;.
-                </div>
-              ) : (
-                filteredProducts.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => {
-                      onSelectProduct(p);
-                      setSearchOpen(false);
-                      setSearchQuery('');
-                      onNavigate('collections');
-                    }}
-                    className="w-full text-left py-3 px-2 flex items-center gap-4 hover:bg-slate-800/40 rounded-xl transition-colors"
-                  >
-                    <img
-                      src={p.images[0]}
-                      alt={p.title}
-                      className="w-12 h-12 object-cover rounded-lg bg-slate-900 border border-slate-700"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 bg-[#d4a853]/15 text-[#d4a853] rounded font-bold">
-                          {p.code || p.sku}
-                        </span>
-                        <span className="text-xs font-bold text-white truncate">{p.title}</span>
-                      </div>
-                      <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
-                        <span>{p.brand}</span>
-                        <span>&middot;</span>
-                        <span className="capitalize">{p.collection}</span>
-                        <span>&middot;</span>
-                        <span>{p.condition}</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-sm font-extrabold text-white">£{p.price.toFixed(2)}</span>
-                    </div>
-                  </button>
-                ))
-              )}
             </div>
           </div>
         </div>
