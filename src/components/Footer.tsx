@@ -172,15 +172,6 @@ export const Footer: React.FC<FooterProps> = ({
                   Contact &amp; Concierge
                 </button>
               </li>
-              <li>
-                <a
-                  href="#label-SAC-671132"
-                  className="hover:text-[#d4a853] transition-colors flex items-center gap-1.5 text-neutral-300"
-                >
-                  <span className="text-[#d4a853]">🖨️</span>
-                  <span>Print 4×6 Shipping Label</span>
-                </a>
-              </li>
             </ul>
           </div>
 
@@ -221,19 +212,6 @@ export const Footer: React.FC<FooterProps> = ({
                 <span>{settings.location || 'London, United Kingdom'} &middot; 24/7</span>
               </li>
             </ul>
-
-            <div className="pt-2">
-              <a
-                id="footer-wa-btn"
-                href={waUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#25D366] text-black text-xs font-extrabold hover:bg-[#20ba5a] transition-all shadow-md"
-              >
-                <MessageCircle className="w-4 h-4 fill-black text-black" />
-                <span>Direct WhatsApp Order</span>
-              </a>
-            </div>
           </div>
 
           {/* Legal & Policies (from styleandclass.store) */}
@@ -284,15 +262,6 @@ export const Footer: React.FC<FooterProps> = ({
                 <Database className="w-3.5 h-3.5 text-[#d4a853]" />
                 <span>Store Database &amp; Admin</span>
               </button>
-
-              <a
-                href="/api/download-zip"
-                download="style-and-class-london-store.zip"
-                className="px-3 py-1.5 text-[11px] text-slate-400 hover:text-[#d4a853] flex items-center gap-1.5 transition-colors"
-                title="Download full project code as ZIP"
-              >
-                <span>📦 Download Store Source Code (.zip)</span>
-              </a>
             </div>
           </div>
         </div>

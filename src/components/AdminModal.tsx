@@ -55,7 +55,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   // Settings form states
   const [settingsPhone, setSettingsPhone] = useState(settings.merchantWhatsApp);
   const [settingsPayPalId, setSettingsPayPalId] = useState(settings.paypalClientId);
-  const [settingsPayPalEmail, setSettingsPayPalEmail] = useState(settings.merchantPayPalEmail || settings.merchantEmail || 'RomeroMoscow@gmail.com');
+  const [settingsPayPalEmail, setSettingsPayPalEmail] = useState(settings.merchantPayPalEmail || settings.merchantEmail || 'styleandclasslondon@gmail.com');
   const [settingsStoreName, setSettingsStoreName] = useState(settings.storeName);
   const [settingsSavedNotice, setSettingsSavedNotice] = useState(false);
   const [actionNotice, setActionNotice] = useState('');
@@ -653,7 +653,7 @@ Total: £${o.total.toFixed(2)} [PAID]
                 required
                 value={settingsPayPalEmail}
                 onChange={(e) => setSettingsPayPalEmail(e.target.value)}
-                placeholder="RomeroMoscow@gmail.com"
+                placeholder="styleandclasslondon@gmail.com"
                 className="w-full text-xs p-2.5 rounded-xl border border-slate-700 bg-[#0a0a0f] text-white outline-none focus:border-[#d4a853] font-mono"
               />
             </div>
