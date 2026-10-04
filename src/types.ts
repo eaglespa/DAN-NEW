@@ -87,6 +87,7 @@ export interface Order {
   whatsappNotified: boolean;
   addressQrDataUrl?: string;
   addressQrUrl?: string;
+  addressBarcode?: string;
   paypalCheckoutUrl?: string;
   cardSummary?: {
     brand: string;

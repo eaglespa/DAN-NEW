@@ -413,7 +413,7 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
         console.warn('Error setting up PayPal buttons:', err);
       }
     }
-  }, [isOpen, sdkLoaded]);
+  }, [isOpen, sdkLoaded, activePaymentTab]);
 
   if (!isOpen) return null;
 
@@ -536,6 +536,23 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
                 <span className="font-mono text-slate-500">styleandclasslondon@gmail.com</span>
               </div>
             </div>
+
+            {/* Scannable Address Barcode for Courier Dispatch */}
+            {completedOrder.order.addressBarcode && (
+              <div className="p-3 bg-[#0b0d14] rounded-2xl border border-slate-800 text-center space-y-1.5 shadow-inner">
+                <span className="text-[10px] text-[#d4a853] font-bold block uppercase tracking-wider">
+                  📦 Courier Shipping Address Barcode
+                </span>
+                <img
+                  src={completedOrder.order.addressBarcode}
+                  alt="Shipping Address Barcode"
+                  className="w-24 h-24 mx-auto bg-white p-1 rounded-xl shadow-md"
+                />
+                <span className="text-[9px] text-slate-400 font-mono block">
+                  Scannable Barcode for Logistics &middot; Alert Dispatched to WhatsApp
+                </span>
+              </div>
+            )}
 
             <div className="pt-2 space-y-2.5">
               {completedOrder.whatsappUrl && (

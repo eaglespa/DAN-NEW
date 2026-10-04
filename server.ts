@@ -5,6 +5,9 @@ import fs from "fs";
 import QRCode from "qrcode";
 import { INITIAL_PRODUCTS, INITIAL_SETTINGS } from "./src/data/initialProducts.js";
 import { Product, Order, StoreSettings } from "./src/types.js";
+import { generateAddressBarcode, bufferToDataUri } from "./lib/barcode.js";
+import { sendOrderAlertToWhatsApp } from "./lib/whatsapp.js";
+import { getStoreWhatsAppNumber, STORE_CONFIG } from "./lib/config.js";
 
 const app = express();
 const PORT = 3000;
@@ -673,7 +676,7 @@ app.get("/api/paypal/config", (req, res) => {
 });
 
 // Server-side PayPal Order Creation with verified product amounts
-app.post("/api/paypal/create-order", async (req, res) => {
+app.post(["/api/paypal/create-order", "/api/checkout/paypal/create-order"], async (req, res) => {
   try {
     const { items: orderItemsParam, shippingCarrierId, customer } = req.body;
     
@@ -796,7 +799,7 @@ app.post("/api/paypal/create-order", async (req, res) => {
 });
 
 // Server-side PayPal Order Capture with verified fund receipt and instant stock deletion
-app.post("/api/paypal/capture-order", async (req, res) => {
+app.post(["/api/paypal/capture-order", "/api/checkout/paypal/capture-order"], async (req, res) => {
   try {
     const { paypalOrderId, customer, carrier: carrierParam, items: orderItemsParam, paymentMethod } = req.body;
 
@@ -888,6 +891,16 @@ app.post("/api/paypal/capture-order", async (req, res) => {
     const orderSubtotal = orderItems.reduce((s, it) => s + it.price * it.quantity, 0);
     const orderTotal = amountCaptured > 0 ? amountCaptured : orderSubtotal;
 
+    // 1. Generate scannable barcode for the buyer's shipping address
+    let barcodeDataUri = "";
+    try {
+      const fullAddressText = `${customer?.fullName || 'Customer'}\n${customer?.address || ''}\n${customer?.city || ''}\n${customer?.postcode || ''}\nUK`;
+      const barcodeBuffer = await generateAddressBarcode(fullAddressText);
+      barcodeDataUri = bufferToDataUri(barcodeBuffer);
+    } catch (bcErr) {
+      console.warn("Address barcode generation error:", bcErr);
+    }
+
     const newOrder: any = {
       id: `SC-${Date.now()}`,
       customer: {
@@ -913,8 +926,35 @@ app.post("/api/paypal/capture-order", async (req, res) => {
       trackingNumber,
       paypalOrderId,
       paypalCaptureId: captureId,
+      addressBarcode: barcodeDataUri,
       createdAt: new Date().toISOString()
     };
+
+    // 2. Dispatch Automated WhatsApp Alert to Store
+    try {
+      const firstItem = orderItems[0] || {};
+      const itemTitleSummary = orderItems.map(i => `${i.productTitle} [${i.code || '1-of-1'}]`).join(', ');
+      const photoUrl = firstItem.image || firstItem.images?.[0] || 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&q=80&w=600';
+
+      const waResult = await sendOrderAlertToWhatsApp({
+        orderId: newOrder.id,
+        itemName: itemTitleSummary || 'Style & Class Curated Fashion',
+        itemPrice: orderTotal,
+        itemCurrency: 'GBP',
+        itemPhotoUrl: photoUrl,
+        buyerName: newOrder.customer.fullName,
+        buyerPhone: newOrder.customer.phone || 'N/A',
+        buyerAddress: `${newOrder.customer.address}, ${newOrder.customer.city}, ${newOrder.customer.postcode}`,
+        shippingCompany: carrierName,
+        barcodeBase64OrUrl: barcodeDataUri
+      });
+
+      if (waResult.success) {
+        newOrder.whatsappNotified = true;
+      }
+    } catch (waErr) {
+      console.warn("Automated WhatsApp alert exception:", waErr);
+    }
 
     orders.unshift(newOrder);
     persistOrders();
@@ -928,6 +968,13 @@ app.post("/api/paypal/capture-order", async (req, res) => {
     console.error("Capture order exception:", err);
     res.status(500).json({ success: false, error: err.message || "Failed to process payment capture" });
   }
+});
+
+// Webhook listener for asynchronous PayPal events
+app.post("/api/checkout/webhook", (req, res) => {
+  const event = req.body || {};
+  console.info(`[PayPal Webhook] Event received: ${event.event_type || 'UNKNOWN'}`);
+  res.json({ received: true });
 });
 
 // Catch-all 404 handler for API routes to never return HTML to API consumers
