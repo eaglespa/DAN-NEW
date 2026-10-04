@@ -930,11 +930,20 @@ app.post(["/api/paypal/capture-order", "/api/checkout/paypal/capture-order"], as
       createdAt: new Date().toISOString()
     };
 
+    const host = req.get('host') || 'localhost:3000';
+    const proto = req.secure || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+    const appBaseUrl = process.env.APP_URL || `${proto}://${host}`;
+    const barcodeUrl = `${appBaseUrl}/api/barcode/${newOrder.id}`;
+
+    let whatsappDirectUrl = "";
+    let whatsappReportText = "";
+
     // 2. Dispatch Automated WhatsApp Alert to Store
     try {
       const firstItem = orderItems[0] || {};
       const itemTitleSummary = orderItems.map(i => `${i.productTitle} [${i.code || '1-of-1'}]`).join(', ');
       const photoUrl = firstItem.image || firstItem.images?.[0] || 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&q=80&w=600';
+      const paymentMethodLabel = paymentMethod === 'card_uk' ? 'Credit / Debit Card' : 'PayPal UK';
 
       const waResult = await sendOrderAlertToWhatsApp({
         orderId: newOrder.id,
@@ -945,16 +954,24 @@ app.post(["/api/paypal/capture-order", "/api/checkout/paypal/capture-order"], as
         buyerName: newOrder.customer.fullName,
         buyerPhone: newOrder.customer.phone || 'N/A',
         buyerAddress: `${newOrder.customer.address}, ${newOrder.customer.city}, ${newOrder.customer.postcode}`,
+        paymentMethod: paymentMethodLabel,
         shippingCompany: carrierName,
+        barcodeUrl,
         barcodeBase64OrUrl: barcodeDataUri
       });
 
       if (waResult.success) {
         newOrder.whatsappNotified = true;
       }
+      whatsappDirectUrl = waResult.directWhatsAppUrl || "";
+      whatsappReportText = waResult.reportText || "";
     } catch (waErr) {
       console.warn("Automated WhatsApp alert exception:", waErr);
     }
+
+    newOrder.barcodeUrl = barcodeUrl;
+    newOrder.whatsappUrl = whatsappDirectUrl;
+    newOrder.whatsappReportText = whatsappReportText;
 
     orders.unshift(newOrder);
     persistOrders();
@@ -962,11 +979,45 @@ app.post(["/api/paypal/capture-order", "/api/checkout/paypal/capture-order"], as
     return res.json({
       success: true,
       order: newOrder,
-      captureId
+      captureId,
+      whatsappUrl: whatsappDirectUrl,
+      whatsappReportText,
+      barcodeUrl
     });
   } catch (err: any) {
     console.error("Capture order exception:", err);
     res.status(500).json({ success: false, error: err.message || "Failed to process payment capture" });
+  }
+});
+
+// Endpoint to serve live scannable address barcode PNG image
+app.get(["/api/barcode/:orderId", "/api/barcode"], async (req, res) => {
+  try {
+    const orderId = req.params.orderId;
+    let textToEncode = "";
+
+    if (orderId) {
+      const order = orders.find(o => o.id === orderId);
+      if (order && order.customer) {
+        textToEncode = `${order.customer.fullName}\n${order.customer.address}\n${order.customer.city}\n${order.customer.postcode}\nUK`;
+      }
+    }
+
+    if (!textToEncode && req.query.text) {
+      textToEncode = String(req.query.text);
+    }
+
+    if (!textToEncode) {
+      textToEncode = "Style & Class London - Delivery Barcode";
+    }
+
+    const buffer = await generateAddressBarcode(textToEncode);
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    return res.send(buffer);
+  } catch (err: any) {
+    console.error("Barcode serving error:", err);
+    res.status(500).send("Error generating barcode image");
   }
 });
 

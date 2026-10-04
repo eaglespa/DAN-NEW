@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
         buyerName: recipientName,
         buyerPhone: resource.payer?.phone?.phone_number?.national_number || '+447591878215',
         buyerAddress: formattedAddress,
+        paymentMethod: 'PayPal UK (Webhook Verified)',
         shippingCompany: 'Tracked Delivery',
         barcodeBase64OrUrl: barcodeUri
       });

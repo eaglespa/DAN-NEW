@@ -88,6 +88,7 @@ export interface Order {
   addressQrDataUrl?: string;
   addressQrUrl?: string;
   addressBarcode?: string;
+  barcodeUrl?: string;
   paypalCheckoutUrl?: string;
   cardSummary?: {
     brand: string;

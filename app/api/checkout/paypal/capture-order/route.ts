@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
       buyerName: customerDetails.name,
       buyerPhone: customerDetails.phone,
       buyerAddress: customerDetails.address,
+      paymentMethod: body.paymentMethod === 'card_uk' ? 'Credit / Debit Card' : 'PayPal UK',
       shippingCompany: shippingCarrier || 'Standard Tracked Delivery',
       barcodeBase64OrUrl: barcodeDataUri,
     });

@@ -46,61 +46,70 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
   const cleanPhone = (order.customer.phone || '').replace(/[^0-9+]/g, '');
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`;
   
-  // High-res QR code image link
+  // Scannable barcode image link & address QR code
+  const barcodeUrl = order.barcodeUrl || `${window.location.origin}/api/barcode/${order.id}`;
+  const barcodeImageSrc = order.addressBarcode || barcodeUrl;
+
   const qrImageSrc = order.addressQrDataUrl || 
     order.addressQrUrl || 
     `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(fullAddress)}`;
 
-  const handleCopyAlert = () => {
-    // Generate text message for clipboard
-    const itemsText = order.items
-      .map(
-        (it, idx) =>
-          `Item ${idx + 1}: ${it.productTitle} [${it.code || '1-of-1'}] - £${it.price.toFixed(2)} (Qty: ${it.quantity}, Size: ${it.size})`
-      )
-      .join('\n');
+  const paymentMethodLabel = order.paymentMethod === 'card_uk' || order.paymentMethod === 'card'
+    ? 'Credit / Debit Card (Bank Card Settlement)'
+    : 'PayPal UK (Express / Pay in 3 / Balance)';
 
-    const alertText = `🚨 *NEW PAID ORDER ALERT - STYLE & CLASS LONDON* 🚨
-Order ID: #${order.id}
-Status: *PAID ALREADY via PayPal UK* ✅
-Date: ${new Date(order.createdAt).toLocaleString('en-GB')}
+  // Complete, fully-detailed report containing all requested details
+  const fullAlertText = 
+`🛍️ *STYLE & CLASS LONDON — FULL ORDER ALERT REPORT* 🛍️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧾 *ORDER ID:* #${order.id}
+💳 *BUYER PAYMENT METHOD (PAYPAL OR CREDIT CARD):*
+${paymentMethodLabel} [PAID & SETTLED] ✅
 
-----------------------------------------
-1️⃣ *BUYER NAME:*
+👤 *BUYER NAME:*
 ${order.customer.fullName}
 
-2️⃣ *BUYER ADDRESS & QR CODE:*
-📍 ${fullAddress}
-📲 *Address QR Code (Scan/Print):*
-${qrImageSrc}
-🗺️ *Google Maps:* ${googleMapsUrl}
+📍 *BUYER ADDRESS:*
+${fullAddress}
 
-3️⃣ *BUYER PHONE NUMBER:*
-📞 ${order.customer.phone}
-💬 *Chat directly:* https://wa.me/${cleanPhone.replace('+', '')}
+📞 *BUYER PHONE NUMBER:*
+${order.customer.phone}
 
-4️⃣ *PRODUCT NAME & PRICE:*
-${order.items.map((it, idx) => `📦 *ITEM ${idx + 1}:*
-• *Product Name:* ${it.productTitle} [${it.code || '1-of-1'}]
-• *Size:* ${it.size} | *Qty:* ${it.quantity}
-• *Price:* £${it.price.toFixed(2)}
-• *Product Photo:* ${it.image}`).join('\n\n')}
+🏷️ *BUYER ADDRESS (BARCODE):*
+${barcodeUrl}
+(Scannable Courier Barcode for Shipping Label)
 
-💰 *PAYMENT SUMMARY:*
-• Subtotal: £${order.subtotal.toFixed(2)}
-• Shipping: ${order.shipping === 0 ? 'FREE UK Delivery' : `£${order.shipping.toFixed(2)}`}
-• *TOTAL PAID: £${order.total.toFixed(2)} [PAID]*
+📦 *SOLD ITEM NAME & PRICE:*
+${order.items.map((it, idx) => `• Item ${idx + 1}: ${it.productTitle} [${it.code || '1-of-1'}] — £${it.price.toFixed(2)} (Qty: ${it.quantity}, Size: ${it.size})`).join('\n')}
 
-5️⃣ *PRODUCT PHOTO (At least 1 photo):*
-${order.items.map((it, idx) => `📸 *Photo ${idx + 1} (${it.productTitle}):*\n${it.image}`).join('\n\n')}
+💰 *TOTAL TRANSACTION PAID:*
+£${order.total.toFixed(2)} GBP (Items: £${order.subtotal.toFixed(2)} + Shipping: £${order.shipping.toFixed(2)})
 
-6️⃣ *SHIPPING COMPANY:*
-🚚 *${order.carrierName || 'Evri Standard Delivery'}* (${order.shipping === 0 ? 'FREE' : `£${order.shipping.toFixed(2)}`})
-----------------------------------------
+📸 *SOLD ITEM PHOTO:*
+${order.items.map((it, idx) => `• Photo ${idx + 1} (${it.productTitle}):\n${it.image}`).join('\n\n')}
 
-${removedProducts && removedProducts.length > 0 ? `🚨 *INVENTORY AUTOMATION (1-PIECE RULE):*\nSold out & automatically removed from active store: ${removedProducts.join(', ')}\n\n` : ''}Style And Class London · Sustainable Pre-Loved Luxury`;
+🚚 *SHIPPING COMPANY (CHOSEN BY BUYER):*
+${order.carrierName || 'Evri Standard Delivery'} (${order.shipping === 0 ? 'FREE Shipping' : `£${order.shipping.toFixed(2)}`})
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✨ *Ready for 24h courier dispatch.*`;
 
-    navigator.clipboard.writeText(alertText).then(() => {
+  const storePhone = '447591878215';
+  const effectiveWhatsAppUrl = `https://api.whatsapp.com/send?phone=${storePhone}&text=${encodeURIComponent(fullAlertText)}`;
+
+  // Automatically trigger WhatsApp alert window
+  React.useEffect(() => {
+    try {
+      const timer = setTimeout(() => {
+        window.open(effectiveWhatsAppUrl, '_blank', 'noopener,noreferrer');
+      }, 600);
+      return () => clearTimeout(timer);
+    } catch (e) {
+      console.warn('Auto WhatsApp dispatch caught:', e);
+    }
+  }, [effectiveWhatsAppUrl]);
+
+  const handleCopyAlert = () => {
+    navigator.clipboard.writeText(fullAlertText).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     });
@@ -171,23 +180,23 @@ ${removedProducts && removedProducts.length > 0 ? `🚨 *INVENTORY AUTOMATION (1
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
               <a
                 id="success-send-whatsapp-btn"
-                href={whatsappUrl}
+                href={effectiveWhatsAppUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="py-3 px-4 bg-[#25D366] hover:bg-[#20ba5a] text-black text-xs sm:text-sm font-black rounded-xl shadow-md transition-all flex items-center justify-center gap-2 group cursor-pointer"
+                className="py-3.5 px-4 bg-[#25D366] hover:bg-[#20ba5a] text-black text-xs sm:text-sm font-black rounded-xl shadow-md transition-all flex items-center justify-center gap-2 group cursor-pointer"
               >
                 <MessageCircle className="w-4 h-4 fill-black" />
-                <span>Open Alert in WhatsApp</span>
+                <span>Open Full Alert in WhatsApp</span>
                 <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </a>
 
               <button
                 type="button"
                 onClick={handleCopyAlert}
-                className="py-3 px-4 bg-[#181a24] hover:bg-slate-800 text-white text-xs font-extrabold rounded-xl border border-slate-700 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="py-3.5 px-4 bg-[#181a24] hover:bg-slate-800 text-white text-xs font-extrabold rounded-xl border border-slate-700 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-[#d4a853]" />}
-                <span>{copied ? 'Alert Text Copied!' : 'Copy WhatsApp Message'}</span>
+                <span>{copied ? 'Full Report Copied!' : 'Copy WhatsApp Report'}</span>
               </button>
             </div>
           </div>
@@ -210,14 +219,30 @@ ${removedProducts && removedProducts.length > 0 ? `🚨 *INVENTORY AUTOMATION (1
             </div>
           )}
 
-          {/* 6 REQUIREMENTS VERIFICATION CARD */}
+          {/* COMPLETE REQUIREMENTS VERIFICATION CARD */}
           <div className="p-4 sm:p-5 bg-[#0a0a0f] rounded-2xl border border-slate-800 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
               <h3 className="text-xs font-black uppercase tracking-wider text-[#d4a853] flex items-center gap-2">
-                <span>6 Order Alert Details Transmitted</span>
+                <span>Verified WhatsApp Alert Transmission Report</span>
               </h3>
-              <span className="text-[11px] bg-[#d4a853]/15 text-[#d4a853] font-bold px-2 py-0.5 rounded">
-                Verified Complete
+              <span className="text-[11px] bg-emerald-500/15 text-emerald-400 font-bold px-2 py-0.5 rounded border border-emerald-500/30">
+                100% Prepared
+              </span>
+            </div>
+
+            {/* Payment Method Verification */}
+            <div className="p-3 bg-[#11131c] rounded-xl border border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <CreditCard className="w-4 h-4 text-emerald-400 shrink-0" />
+                <div>
+                  <span className="text-[10px] text-slate-400 block font-bold">Buyer Payment Method</span>
+                  <strong className="text-xs text-white">
+                    {paymentMethodLabel}
+                  </strong>
+                </div>
+              </div>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full">
+                PAID &amp; SETTLED
               </span>
             </div>
 
@@ -265,16 +290,27 @@ ${removedProducts && removedProducts.length > 0 ? `🚨 *INVENTORY AUTOMATION (1
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-slate-400 font-bold text-[11px]">
                   <MapPin className="w-3.5 h-3.5 text-[#d4a853]" />
-                  <span>2. Buyer Address &amp; Generated Address QR Code</span>
+                  <span>2. Buyer Address &amp; Scannable Courier Barcode</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowQrExpanded(!showQrExpanded)}
-                  className="text-[11px] text-[#d4a853] hover:underline font-bold flex items-center gap-1 cursor-pointer"
-                >
-                  <QrCode className="w-3 h-3" />
-                  <span>{showQrExpanded ? 'Hide QR' : 'View QR'}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={barcodeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] bg-slate-800 hover:bg-slate-700 text-[#d4a853] px-2 py-1 rounded font-bold flex items-center gap-1 border border-slate-700 cursor-pointer"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    <span>Open Barcode URL</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setShowQrExpanded(!showQrExpanded)}
+                    className="text-[11px] text-[#d4a853] hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <QrCode className="w-3 h-3" />
+                    <span>{showQrExpanded ? 'Hide QR' : 'View QR'}</span>
+                  </button>
+                </div>
               </div>
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -299,25 +335,25 @@ ${removedProducts && removedProducts.length > 0 ? `🚨 *INVENTORY AUTOMATION (1
                   </div>
                 </div>
 
-                {/* Generated Address QR Code Box */}
+                {/* Courier Address Barcode Image Box */}
                 <div className="flex items-center gap-3 p-2 bg-white rounded-xl shadow-md border border-slate-300 shrink-0">
                   <img
-                    src={qrImageSrc}
-                    alt="Buyer Address QR Code"
+                    src={barcodeImageSrc}
+                    alt="Courier Address Barcode"
                     className="w-20 h-20 sm:w-22 sm:h-22 object-contain"
                   />
                   <div className="flex flex-col gap-1 pr-1 text-black">
                     <span className="text-[10px] font-black uppercase text-slate-700 tracking-wider">
-                      Address QR
+                      Address Barcode
                     </span>
                     <button
                       type="button"
                       onClick={handleDownloadQr}
-                      title="Download QR code"
+                      title="Download Courier Barcode"
                       className="p-1.5 bg-slate-900 hover:bg-black text-white rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
                     >
                       <Download className="w-3 h-3 text-[#d4a853]" />
-                      <span>Save QR</span>
+                      <span>Save Code</span>
                     </button>
                   </div>
                 </div>

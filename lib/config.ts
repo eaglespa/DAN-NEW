@@ -17,6 +17,12 @@ export const STORE_CONFIG = {
  * Example: "+44 7591 878215" -> "447591878215"
  */
 export function getStoreWhatsAppNumber(): string {
-  const digitsOnly = STORE_CONFIG.rawPhoneNumber.replace(/\D/g, '');
+  let digitsOnly = STORE_CONFIG.rawPhoneNumber.replace(/\D/g, '');
+  // If UK number includes international code + trunk zero (e.g. 4407591878215), strip trunk 0 -> 447591878215
+  if (digitsOnly.startsWith('440')) {
+    digitsOnly = '44' + digitsOnly.slice(3);
+  } else if (digitsOnly.startsWith('07')) {
+    digitsOnly = '44' + digitsOnly.slice(1);
+  }
   return digitsOnly || '447591878215';
 }
