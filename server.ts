@@ -83,44 +83,36 @@ try {
 try {
   if (fs.existsSync(SETTINGS_FILE)) {
     settings = JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf-8"));
-    if (!settings.paypalClientId && process.env.PAYPAL_CLIENT_ID) {
-      settings.paypalClientId = process.env.PAYPAL_CLIENT_ID;
-    }
-    if (!settings.paypalSecret && (process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET)) {
-      settings.paypalSecret = process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET;
-    }
-    if (!settings.paypalApiKey && process.env.PAYPAL_API_KEY) {
-      settings.paypalApiKey = process.env.PAYPAL_API_KEY;
-    }
-    if (settings.paypalClientId && (settings.paypalSecret || settings.paypalApiKey)) {
-      settings.paypalConnected = true;
-    }
-    if (process.env.WHATSAPP_BUSINESS_PHONE) {
-      settings.merchantWhatsApp = process.env.WHATSAPP_BUSINESS_PHONE;
-    }
   } else {
     settings = { ...INITIAL_SETTINGS };
-    if (process.env.WHATSAPP_BUSINESS_PHONE) {
-      settings.merchantWhatsApp = process.env.WHATSAPP_BUSINESS_PHONE;
-    }
-    if (process.env.PAYPAL_CLIENT_ID) {
-      settings.paypalClientId = process.env.PAYPAL_CLIENT_ID;
-    }
-    if (process.env.PAYPAL_API_KEY || process.env.PAYPAL_CLIENT_SECRET) {
-      settings.paypalApiKey = process.env.PAYPAL_API_KEY || process.env.PAYPAL_CLIENT_SECRET;
-      settings.paypalConnected = true;
-    }
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
   }
+
+  // Always enforce live PayPal environment variables if provided
+  if (process.env.PAYPAL_CLIENT_ID) {
+    settings.paypalClientId = process.env.PAYPAL_CLIENT_ID;
+  }
+  if (process.env.PAYPAL_CLIENT_SECRET || process.env.PAYPAL_SECRET) {
+    settings.paypalSecret = process.env.PAYPAL_CLIENT_SECRET || process.env.PAYPAL_SECRET;
+  }
+  if (process.env.PAYPAL_API_KEY) {
+    settings.paypalApiKey = process.env.PAYPAL_API_KEY;
+  }
+  if (process.env.WHATSAPP_BUSINESS_PHONE) {
+    settings.merchantWhatsApp = process.env.WHATSAPP_BUSINESS_PHONE;
+  }
+  if (settings.paypalClientId && (settings.paypalSecret || settings.paypalApiKey)) {
+    settings.paypalConnected = true;
+  }
+  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
 } catch (e) {
   settings = { ...INITIAL_SETTINGS };
   if (process.env.PAYPAL_CLIENT_ID) {
     settings.paypalClientId = process.env.PAYPAL_CLIENT_ID;
   }
-  if (process.env.PAYPAL_API_KEY || process.env.PAYPAL_CLIENT_SECRET) {
-    settings.paypalApiKey = process.env.PAYPAL_API_KEY || process.env.PAYPAL_CLIENT_SECRET;
-    settings.paypalConnected = true;
+  if (process.env.PAYPAL_CLIENT_SECRET || process.env.PAYPAL_SECRET) {
+    settings.paypalSecret = process.env.PAYPAL_CLIENT_SECRET || process.env.PAYPAL_SECRET;
   }
+  settings.paypalConnected = true;
 }
 
 function persistProducts() {
@@ -638,77 +630,303 @@ app.post("/api/settings", (req, res) => {
   res.json({ success: true, settings });
 });
 
+// Helper to obtain fresh live PayPal access token
+async function getPayPalAccessToken(): Promise<string> {
+  const clientId = process.env.PAYPAL_CLIENT_ID || settings.paypalClientId;
+  const clientSecret = process.env.PAYPAL_CLIENT_SECRET || process.env.PAYPAL_SECRET || settings.paypalSecret;
+
+  if (!clientId || !clientSecret) {
+    throw new Error("PayPal Client ID or Secret is not configured.");
+  }
+
+  const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+  const res = await fetch("https://api-m.paypal.com/v1/oauth2/token", {
+    method: "POST",
+    headers: {
+      "Authorization": `Basic ${auth}`,
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: "grant_type=client_credentials"
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error("PayPal token error:", res.status, errorText);
+    throw new Error(`PayPal authentication failed: ${res.status}`);
+  }
+
+  const data = await res.json();
+  return data.access_token;
+}
+
 // GET PayPal configuration for client checkout
 app.get("/api/paypal/config", (req, res) => {
-  const clientId = settings.paypalClientId || process.env.PAYPAL_CLIENT_ID || "";
-  const hasSecret = Boolean(settings.paypalSecret || settings.paypalApiKey || process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET || process.env.PAYPAL_API_KEY);
+  const clientId = process.env.PAYPAL_CLIENT_ID || settings.paypalClientId || "";
+  const hasSecret = Boolean(process.env.PAYPAL_CLIENT_SECRET || process.env.PAYPAL_SECRET || settings.paypalSecret);
   res.json({
     clientId,
     currency: settings.currency || "GBP",
-    configured: Boolean(clientId && clientId !== "sb"),
-    connected: Boolean(hasSecret || (clientId && clientId !== "sb")),
-    mode: "direct"
+    configured: Boolean(clientId),
+    connected: Boolean(clientId && hasSecret),
+    merchantEmail: settings.merchantPayPalEmail || settings.merchantEmail || "styleandclasslondon@gmail.com"
   });
 });
 
-// Server-side PayPal Order Creation proxy
+// Server-side PayPal Order Creation with verified product amounts
 app.post("/api/paypal/create-order", async (req, res) => {
   try {
-    const { amount, currency = "GBP" } = req.body;
-    const clientId = settings.paypalClientId || process.env.PAYPAL_CLIENT_ID;
-    const clientSecret = settings.paypalSecret || settings.paypalApiKey || process.env.PAYPAL_SECRET || process.env.PAYPAL_CLIENT_SECRET || process.env.PAYPAL_API_KEY;
+    const { items: orderItemsParam, shippingCarrierId, customer } = req.body;
+    
+    // Server-side validation of items and price calculation
+    let calculatedSubtotal = 0;
+    const verifiedItems: any[] = [];
 
-    if (!clientId || !clientSecret) {
-      return res.json({ success: true, orderId: `PP-${Date.now()}` });
-    }
-
-    const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-
-    // Request OAuth token from PayPal
-    const tokenRes = await fetch("https://api-m.paypal.com/v1/oauth2/token", {
-      method: "POST",
-      headers: {
-        "Authorization": `Basic ${auth}`,
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: "grant_type=client_credentials"
-    });
-
-    if (tokenRes.ok) {
-      const tokenData = await tokenRes.json();
-      const accessToken = tokenData.access_token;
-
-      const orderRes = await fetch("https://api-m.paypal.com/v2/checkout/orders", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${accessToken}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          intent: "CAPTURE",
-          purchase_units: [
-            {
-              amount: {
-                currency_code: currency,
-                value: Number(amount).toFixed(2)
-              },
-              description: "Style & Class London Luxury Fashion Order"
-            }
-          ]
-        })
-      });
-
-      if (orderRes.ok) {
-        const orderData = await orderRes.json();
-        return res.json({ success: true, orderId: orderData.id });
+    if (Array.isArray(orderItemsParam) && orderItemsParam.length > 0) {
+      for (const reqItem of orderItemsParam) {
+        const prod = products.find(p => p.id === (reqItem.id || reqItem.product?.id));
+        if (prod) {
+          const qty = Number(reqItem.quantity) || 1;
+          calculatedSubtotal += prod.price * qty;
+          verifiedItems.push({
+            name: `${prod.title} [${prod.code || '1-of-1'}]`.slice(0, 127),
+            unit_amount: {
+              currency_code: "GBP",
+              value: prod.price.toFixed(2)
+            },
+            quantity: String(qty),
+            category: "PHYSICAL_GOODS"
+          });
+        }
       }
     }
 
-    // Direct fallback order ID
-    return res.json({ success: true, orderId: `PP-SECURE-${Math.floor(100000 + Math.random() * 900000)}` });
+    // Fallback if raw amount passed
+    if (calculatedSubtotal === 0 && req.body.amount) {
+      calculatedSubtotal = parseFloat(req.body.amount) || 0;
+    }
+
+    if (calculatedSubtotal <= 0) {
+      return res.status(400).json({ success: false, error: "Order subtotal must be greater than £0.00" });
+    }
+
+    // Shipping calculation
+    const carrierRates: Record<string, number> = {
+      evri: 2.60,
+      inpost: 2.89,
+      royalmail: 3.65
+    };
+    const freeThreshold = settings.freeShippingThreshold ?? 45.0;
+    const shippingCost = calculatedSubtotal >= freeThreshold ? 0 : (carrierRates[shippingCarrierId] ?? 2.60);
+    const calculatedTotal = Number((calculatedSubtotal + shippingCost).toFixed(2));
+
+    const accessToken = await getPayPalAccessToken();
+
+    const purchaseUnit: any = {
+      reference_id: `SC-${Date.now()}`,
+      description: "Style & Class London - Pre-Loved Curated Fashion",
+      amount: {
+        currency_code: "GBP",
+        value: calculatedTotal.toFixed(2),
+        breakdown: {
+          item_total: {
+            currency_code: "GBP",
+            value: calculatedSubtotal.toFixed(2)
+          },
+          shipping: {
+            currency_code: "GBP",
+            value: shippingCost.toFixed(2)
+          }
+        }
+      }
+    };
+
+    if (verifiedItems.length > 0) {
+      purchaseUnit.items = verifiedItems;
+    }
+
+    if (customer?.address) {
+      purchaseUnit.shipping = {
+        name: { full_name: customer.fullName || "UK Fashion Customer" },
+        address: {
+          address_line_1: customer.address.slice(0, 300),
+          admin_area_2: (customer.city || "London").slice(0, 120),
+          postal_code: (customer.postcode || "").slice(0, 60),
+          country_code: "GB"
+        }
+      };
+    }
+
+    const orderRes = await fetch("https://api-m.paypal.com/v2/checkout/orders", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "PayPal-Request-Id": `order-${Date.now()}-${Math.random().toString(36).substring(7)}`
+      },
+      body: JSON.stringify({
+        intent: "CAPTURE",
+        purchase_units: [purchaseUnit],
+        application_context: {
+          brand_name: "Style & Class London",
+          shipping_preference: customer?.address ? "SET_PROVIDED_ADDRESS" : "NO_SHIPPING",
+          user_action: "PAY_NOW"
+        }
+      })
+    });
+
+    const orderData = await orderRes.json();
+    if (!orderRes.ok) {
+      console.error("PayPal Create Order error:", orderRes.status, orderData);
+      return res.status(orderRes.status).json({
+        success: false,
+        error: orderData.message || orderData.details?.[0]?.description || "Failed to create order on PayPal",
+        details: orderData
+      });
+    }
+
+    return res.json({
+      success: true,
+      orderId: orderData.id,
+      calculatedTotal: calculatedTotal.toFixed(2)
+    });
   } catch (err: any) {
-    console.error("PayPal order proxy error:", err);
-    res.json({ success: true, orderId: `PP-${Date.now()}` });
+    console.error("Create order exception:", err);
+    res.status(500).json({ success: false, error: err.message || "Failed to connect to PayPal API" });
+  }
+});
+
+// Server-side PayPal Order Capture with verified fund receipt and instant stock deletion
+app.post("/api/paypal/capture-order", async (req, res) => {
+  try {
+    const { paypalOrderId, customer, carrier: carrierParam, items: orderItemsParam, paymentMethod } = req.body;
+
+    if (!paypalOrderId) {
+      return res.status(400).json({ success: false, error: "Missing paypalOrderId for capture" });
+    }
+
+    const accessToken = await getPayPalAccessToken();
+
+    // Call PayPal capture endpoint
+    const captureRes = await fetch(`https://api-m.paypal.com/v2/checkout/orders/${encodeURIComponent(paypalOrderId)}/capture`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "PayPal-Request-Id": `capture-${paypalOrderId}`
+      }
+    });
+
+    const captureData = await captureRes.json();
+
+    if (!captureRes.ok) {
+      console.error("PayPal Capture failed:", captureRes.status, captureData);
+      return res.status(captureRes.status).json({
+        success: false,
+        error: captureData.message || captureData.details?.[0]?.description || "PayPal payment capture failed",
+        details: captureData
+      });
+    }
+
+    // Verify status is COMPLETED
+    const captureStatus = captureData.status;
+    const captureDetail = captureData.purchase_units?.[0]?.payments?.captures?.[0];
+    const isCompleted = captureStatus === "COMPLETED" || captureDetail?.status === "COMPLETED";
+
+    if (!isCompleted) {
+      return res.status(400).json({
+        success: false,
+        error: `Payment is not completed. Current status: ${captureStatus || 'UNKNOWN'}`
+      });
+    }
+
+    const captureId = captureDetail?.id || paypalOrderId;
+    const amountCaptured = parseFloat(captureDetail?.amount?.value || "0");
+
+    // Reconcile items from inventory
+    const orderItems: any[] = [];
+    const purchasedProductIds: string[] = [];
+
+    if (Array.isArray(orderItemsParam)) {
+      for (const item of orderItemsParam) {
+        const prod = products.find(p => p.id === (item.id || item.product?.id));
+        if (prod) {
+          orderItems.push({
+            productId: prod.id,
+            productTitle: prod.title,
+            price: prod.price,
+            quantity: item.quantity || 1,
+            images: prod.images,
+            image: prod.images[0] || '',
+            code: prod.code,
+            sku: prod.sku,
+            brand: prod.brand,
+            size: prod.sizes?.[0] || 'One Size',
+            color: prod.colors?.[0] || 'Original',
+            category: prod.category
+          });
+          purchasedProductIds.push(prod.id);
+        }
+      }
+    }
+
+    // CRITICAL USER REQUIREMENT: 1-OF-1 INVENTORY DELETION UPON PAYMENT
+    if (purchasedProductIds.length > 0) {
+      products = products.filter(p => !purchasedProductIds.includes(p.id));
+      persistProducts();
+    }
+
+    const carrierId: 'evri' | 'inpost' | 'royalmail' =
+      carrierParam === 'royalmail' || carrierParam?.id === 'royalmail'
+        ? 'royalmail'
+        : carrierParam === 'inpost' || carrierParam?.id === 'inpost'
+        ? 'inpost'
+        : 'evri';
+    const carrierName = carrierId === 'royalmail' ? 'Royal Mail 48 Tracked' : carrierId === 'inpost' ? 'InPost 24/7 Locker' : 'Evri Standard Tracked';
+    const trackingPrefix = carrierId === 'royalmail' ? 'GB-RM' : carrierId === 'inpost' ? 'INP' : 'EVR';
+    const trackingNumber = `${trackingPrefix}-${Date.now().toString().slice(-8)}`;
+
+    const orderSubtotal = orderItems.reduce((s, it) => s + it.price * it.quantity, 0);
+    const orderTotal = amountCaptured > 0 ? amountCaptured : orderSubtotal;
+
+    const newOrder: any = {
+      id: `SC-${Date.now()}`,
+      customer: {
+        fullName: customer?.fullName || "UK Fashion Customer",
+        email: customer?.email || settings.merchantEmail,
+        phone: customer?.phone || "",
+        address: customer?.address || "",
+        city: customer?.city || "London",
+        postcode: customer?.postcode || ""
+      },
+      items: orderItems,
+      subtotal: orderSubtotal,
+      shipping: orderTotal - orderSubtotal > 0 ? orderTotal - orderSubtotal : 0,
+      discount: 0,
+      total: orderTotal,
+      currency: "GBP",
+      paymentMethod: paymentMethod === 'card_uk' ? 'card_uk' : 'paypal_uk',
+      paymentStatus: 'completed',
+      status: 'confirmed',
+      whatsappNotified: false,
+      carrier: carrierId,
+      carrierName,
+      trackingNumber,
+      paypalOrderId,
+      paypalCaptureId: captureId,
+      createdAt: new Date().toISOString()
+    };
+
+    orders.unshift(newOrder);
+    persistOrders();
+
+    return res.json({
+      success: true,
+      order: newOrder,
+      captureId
+    });
+  } catch (err: any) {
+    console.error("Capture order exception:", err);
+    res.status(500).json({ success: false, error: err.message || "Failed to process payment capture" });
   }
 });
 
