@@ -45,7 +45,7 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
   onInstantDelete,
   onOrderSuccess
 }) => {
-  const [activePaymentTab, setActivePaymentTab] = useState<'card' | 'paypal' | 'whatsapp'>(
+  const [activePaymentTab, setActivePaymentTab] = useState<'card' | 'paypal'>(
     initialPaymentMethod === 'paypal' ? 'paypal' : 'card'
   );
   const [fullName, setFullName] = useState('');
@@ -415,69 +415,6 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
     }
   }, [isOpen, sdkLoaded]);
 
-  // Handle WhatsApp Reservation
-  const handleWhatsAppOrder = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateDeliveryDetails()) return;
-
-    // Reserve 1-of-1 items
-    const productIdsToDelete = itemsRef.current.map(it => it.product.id);
-    if (onInstantDelete) {
-      onInstantDelete(productIdsToDelete);
-    }
-
-    const cleanWa = (merchantWhatsApp || '+447591878215').replace(/[^0-9+]/g, '').replace('+', '');
-    const itemsSummary = items.map(i => `${i.product.title} [${i.product.code || '1-of-1'}]`).join(', ');
-    const waText = encodeURIComponent(
-      `Hello Style & Class London! I would like to reserve via WhatsApp:\n\n${itemsSummary}\nTotal: £${total.toFixed(
-        2
-      )}\nCarrier: ${selectedRate.name}\nName: ${fullName}\nPhone: ${phone}\nAddress: ${address}, ${city}, ${postcode}`
-    );
-    const waUrl = `https://wa.me/${cleanWa}?text=${waText}`;
-
-    const newOrder: Order = {
-      id: `SC-WA-${Date.now()}`,
-      customer: {
-        fullName: fullName.trim(),
-        email: 'whatsapp-order@styleandclass.store',
-        phone: phone.trim(),
-        address: address.trim(),
-        city: city.trim(),
-        postcode: postcode.trim()
-      },
-      items: items.map(it => ({
-        productId: it.product.id,
-        productTitle: it.product.title,
-        color: it.selectedColor || (typeof it.product.colors?.[0] === 'object' ? (it.product.colors[0] as any).name : (it.product.colors?.[0] || 'Original')),
-        size: it.selectedSize || it.product.sizes?.[0] || 'One Size',
-        quantity: it.quantity,
-        price: it.product.price,
-        image: it.product.images[0] || '',
-        code: it.product.code,
-        brand: it.product.brand
-      })),
-      subtotal,
-      shipping,
-      discount: 0,
-      total,
-      currency: 'GBP',
-      paymentMethod: 'whatsapp',
-      paymentStatus: 'pending',
-      whatsappNotified: true,
-      carrier: (carrier === 'royalmail' || carrier === 'inpost') ? carrier : 'evri',
-      carrierName: selectedRate.name,
-      createdAt: new Date().toISOString()
-    };
-
-    setCompletedOrder({
-      order: newOrder,
-      directPayPalUrl: '',
-      whatsappUrl: waUrl
-    });
-
-    onOrderSuccess(newOrder, waUrl, productIdsToDelete);
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -763,8 +700,8 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
                 2. Select Real Payment Method
               </h4>
 
-              {/* Payment Tabs */}
-              <div className="grid grid-cols-3 gap-1.5 bg-[#090a0f] p-1 rounded-2xl border border-slate-800">
+              {/* Payment Tabs (Card and PayPal only) */}
+              <div className="grid grid-cols-2 gap-2 bg-[#090a0f] p-1 rounded-2xl border border-slate-800">
                 {/* Credit / Debit Card Tab */}
                 <button
                   type="button"
@@ -772,14 +709,14 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
                     setActivePaymentTab('card');
                     setErrorMessage('');
                   }}
-                  className={`py-2 px-2 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer text-xs ${
+                  className={`py-2.5 px-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all cursor-pointer text-xs ${
                     activePaymentTab === 'card'
                       ? 'bg-[#181b29] text-white border border-[#d4a853] shadow-md'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  <CreditCard className="w-3.5 h-3.5 text-[#d4a853]" />
-                  <span className="truncate">Debit / Card</span>
+                  <CreditCard className="w-4 h-4 text-[#d4a853]" />
+                  <span>Debit / Credit Card</span>
                 </button>
 
                 {/* PayPal Tab */}
@@ -789,7 +726,7 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
                     setActivePaymentTab('paypal');
                     setErrorMessage('');
                   }}
-                  className={`py-2 px-2 rounded-xl font-bold flex items-center justify-center gap-1 transition-all cursor-pointer text-xs ${
+                  className={`py-2.5 px-3 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer text-xs ${
                     activePaymentTab === 'paypal'
                       ? 'bg-[#181b29] text-[#ffc439] border border-[#ffc439]/60 shadow-md'
                       : 'text-slate-400 hover:text-white'
@@ -797,23 +734,9 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
                 >
                   <span className="italic font-black text-[#0079C1]">Pay</span>
                   <span className="italic font-black text-[#00457C] -ml-1">Pal</span>
-                </button>
-
-                {/* WhatsApp Tab */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActivePaymentTab('whatsapp');
-                    setErrorMessage('');
-                  }}
-                  className={`py-2 px-2 rounded-xl font-bold flex items-center justify-center gap-1 transition-all cursor-pointer text-xs ${
-                    activePaymentTab === 'whatsapp'
-                      ? 'bg-[#181b29] text-emerald-400 border border-emerald-500/60 shadow-md'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>WhatsApp</span>
+                  <span className="text-[10px] bg-amber-400/20 text-amber-300 px-1 rounded ml-1 font-sans">
+                    Pay in 3
+                  </span>
                 </button>
               </div>
 
@@ -884,29 +807,6 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
                   </div>
                 )}
                 <div ref={paypalContainerRef} id="paypal-smart-buttons-container" className="w-full min-h-[48px]" />
-              </div>
-
-              {/* TAB 3: WHATSAPP CONCIERGE ORDER */}
-              <div className={activePaymentTab === 'whatsapp' ? 'space-y-3 pt-1 animate-fade-in' : 'hidden'}>
-                <div className="p-3 bg-[#0a0c14] rounded-2xl border border-slate-800 space-y-1 text-slate-300">
-                  <p className="text-[11px] font-bold text-white flex items-center gap-1.5">
-                    <MessageCircle className="w-4 h-4 text-[#25D366]" />
-                    Reserve via WhatsApp Direct
-                  </p>
-                  <p className="text-[10px] text-slate-400">
-                    Instantly reserve this 1-of-1 piece and arrange bank transfer or cash upon collection directly with Style &amp; Class London.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleWhatsAppOrder}
-                  className="w-full py-3.5 px-6 rounded-2xl bg-[#25D366] hover:bg-[#20ba5a] text-black font-black text-xs sm:text-sm tracking-wide shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
-                >
-                  <MessageCircle className="w-4 h-4 fill-black" />
-                  <span>Reserve via WhatsApp (£{total.toFixed(2)})</span>
-                  <ArrowRight className="w-4 h-4 ml-1" />
-                </button>
               </div>
             </div>
 
