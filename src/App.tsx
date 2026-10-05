@@ -389,9 +389,34 @@ export default function App() {
       if (whatsappUrl) {
         window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
       } else {
-        const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9+]/g, '').replace('+', '');
-        const message = `👋 Hello Style & Class London! I want to order the:\n\n👗 *${targetProduct.title}* [${targetProduct.code || targetProduct.sku || '1-of-1'}]\nBrand: ${targetProduct.brand || 'Designer'}\nSize: ${targetProduct.sizes[0] || 'Standard'}\nQuantity: 1\nPrice: £${targetProduct.price.toFixed(2)}\n\nPlease assist me with quick UK delivery checkout!`;
-        window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+        const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9]/g, '');
+        const normPhone = cleanPhone.startsWith('440') ? '44' + cleanPhone.slice(3) : cleanPhone.startsWith('07') ? '44' + cleanPhone.slice(1) : (cleanPhone || '447591878215');
+        const message = 
+`👑 *STYLE & CLASS LONDON* 👑
+_Curated Pre-Loved Luxury Fashion · London, United Kingdom_
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚜️ *NEW ORDER PURCHASE REQUEST* ⚜️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📦 *5. ITEM DETAILS*
+• *Name:* ${targetProduct.title} [${targetProduct.code || targetProduct.sku || '1-of-1'}]
+• *Brand:* ${targetProduct.brand || 'Designer'}
+• *Price:* £${targetProduct.price.toFixed(2)} GBP
+• *Size:* ${targetProduct.sizes[0] || 'Standard'}
+• *Condition:* Pre-Loved / Excellent 1-of-1 Piece
+📸 *Photo:*
+${targetProduct.images[0] || ''}
+
+👤 *BUYER DETAILS TO COMPLETE DISPATCH:*
+1. Buyer Full Name:
+2. Buyer Street Address & Postcode:
+3. Buyer Phone Number:
+4. Preferred Courier (Evri £2.60 / InPost £2.89 / Royal Mail £3.65):
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🇬🇧 *Style & Class London · styleandclass.store*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+        window.open(`https://api.whatsapp.com/send?phone=${normPhone}&text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
       }
 
       if (order) {
@@ -403,9 +428,33 @@ export default function App() {
       }
     } catch (e) {
       console.warn('Backend order recording error:', e);
-      const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9+]/g, '').replace('+', '');
-      const message = `👋 Hello Style & Class London! I want to order the:\n\n👗 *${targetProduct.title}* [${targetProduct.code || targetProduct.sku || '1-of-1'}]\nBrand: ${targetProduct.brand || 'Designer'}\nSize: ${targetProduct.sizes[0] || 'Standard'}\nQuantity: 1\nPrice: £${targetProduct.price.toFixed(2)}\n\nPlease assist me with quick UK delivery checkout!`;
-      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+      const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9]/g, '');
+      const normPhone = cleanPhone.startsWith('440') ? '44' + cleanPhone.slice(3) : cleanPhone.startsWith('07') ? '44' + cleanPhone.slice(1) : (cleanPhone || '447591878215');
+      const message = 
+`👑 *STYLE & CLASS LONDON* 👑
+_Curated Pre-Loved Luxury Fashion · London, United Kingdom_
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚜️ *NEW ORDER PURCHASE REQUEST* ⚜️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📦 *5. ITEM DETAILS*
+• *Name:* ${targetProduct.title} [${targetProduct.code || targetProduct.sku || '1-of-1'}]
+• *Brand:* ${targetProduct.brand || 'Designer'}
+• *Price:* £${targetProduct.price.toFixed(2)} GBP
+• *Size:* ${targetProduct.sizes[0] || 'Standard'}
+📸 *Photo:*
+${targetProduct.images[0] || ''}
+
+👤 *BUYER DETAILS TO COMPLETE DISPATCH:*
+1. Buyer Full Name:
+2. Buyer Street Address & Postcode:
+3. Buyer Phone Number:
+4. Preferred Courier (Evri £2.60 / InPost £2.89 / Royal Mail £3.65):
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🇬🇧 *Style & Class London · styleandclass.store*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+      window.open(`https://api.whatsapp.com/send?phone=${normPhone}&text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -479,13 +528,34 @@ export default function App() {
       }
     } catch (e) {
       console.warn('Backend order recording error from cart:', e);
-      const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9+]/g, '').replace('+', '');
+      const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9]/g, '');
+      const normPhone = cleanPhone.startsWith('440') ? '44' + cleanPhone.slice(3) : cleanPhone.startsWith('07') ? '44' + cleanPhone.slice(1) : (cleanPhone || '447591878215');
       const itemsText = cartItems
-        .map((it) => `• ${it.product.title} [${it.product.code || it.product.sku || '1-of-1'}] (${it.selectedSize}) x${it.quantity} - £${(it.product.price * it.quantity).toFixed(2)}`)
-        .join('\n');
+        .map((it, idx) => `• *Item ${idx + 1}:* ${it.product.title} [${it.product.code || it.product.sku || '1-of-1'}]\n  - *Price:* £${(it.product.price * it.quantity).toFixed(2)} GBP (Qty: ${it.quantity}, Size: ${it.selectedSize})\n📸 *Photo:* ${it.product.images[0] || ''}`)
+        .join('\n\n');
       const subtotal = cartItems.reduce((a, b) => a + b.product.price * b.quantity, 0);
-      const message = `👋 Hello Style & Class London! I'd like to place an order directly via WhatsApp:\n\n*Items in Bag:*\n${itemsText}\n\n*Subtotal: £${subtotal.toFixed(2)}*\nPlease provide payment and UK delivery confirmation!`;
-      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+      const message = 
+`👑 *STYLE & CLASS LONDON* 👑
+_Curated Pre-Loved Luxury Fashion · London, United Kingdom_
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚜️ *BAG CHECKOUT PURCHASE REQUEST* ⚜️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📦 *5. ITEMS DETAILS:*
+${itemsText}
+
+💰 *TOTAL BAG VALUE:* £${subtotal.toFixed(2)} GBP
+
+👤 *BUYER DETAILS TO COMPLETE DISPATCH:*
+1. Buyer Full Name:
+2. Buyer Street Address & Postcode:
+3. Buyer Phone Number:
+4. Preferred Courier (Evri £2.60 / InPost £2.89 / Royal Mail £3.65):
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🇬🇧 *Style & Class London · styleandclass.store*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+      window.open(`https://api.whatsapp.com/send?phone=${normPhone}&text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
     }
   };
 

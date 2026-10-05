@@ -16,9 +16,11 @@ import {
   ShieldCheck,
   Navigation,
   Printer,
-  CreditCard
+  CreditCard,
+  Star
 } from 'lucide-react';
 import { Order } from '../types';
+import { VerifiedBuyerReviewModal } from './VerifiedBuyerReviewModal';
 
 interface OrderSuccessModalProps {
   order: Order | null;
@@ -39,6 +41,8 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const [showQrExpanded, setShowQrExpanded] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
   if (!order) return null;
 
@@ -58,40 +62,58 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
     ? 'Credit / Debit Card (Bank Card Settlement)'
     : 'PayPal UK (Express / Pay in 3 / Balance)';
 
-  // Complete, fully-detailed report containing all requested details
+  const formattedDate = new Date(order.createdAt || Date.now()).toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  // Complete, official company report containing all 6 requested numbered fields
   const fullAlertText = 
-`🛍️ *STYLE & CLASS LONDON — FULL ORDER ALERT REPORT* 🛍️
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`👑 *STYLE & CLASS LONDON* 👑
+_Curated Pre-Loved Luxury Fashion · London, United Kingdom_
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚜️ *OFFICIAL ORDER DISPATCH ALERT* ⚜️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 🧾 *ORDER ID:* #${order.id}
-💳 *BUYER PAYMENT METHOD (PAYPAL OR CREDIT CARD):*
-${paymentMethodLabel} [PAID & SETTLED] ✅
+📅 *DATE:* ${formattedDate}
+💳 *PAYMENT METHOD:* ${paymentMethodLabel} (PAID & VERIFIED)
+💰 *TOTAL PAID:* £${order.total.toFixed(2)} GBP
 
-👤 *BUYER NAME:*
-${order.customer.fullName}
+👤 *1. BUYER NAME*
+• Full Name: *${order.customer.fullName}*
 
-📍 *BUYER ADDRESS:*
-${fullAddress}
+📍 *2. BUYER ADDRESS*
+• Delivery Address: *${fullAddress}*
+• Country: United Kingdom (GB)
 
-📞 *BUYER PHONE NUMBER:*
-${order.customer.phone}
+📞 *3. BUYER PHONE NUMBER*
+• Contact Phone: *${order.customer.phone}*
+• Direct WhatsApp: https://wa.me/${cleanPhone}
 
-🏷️ *BUYER ADDRESS (BARCODE):*
+🏷️ *4. BUYER ADDRESS (BARCODE FOR COURIER)*
+• Scannable Barcode URL:
 ${barcodeUrl}
-(Scannable Courier Barcode for Shipping Label)
+_(Scan directly with courier scanner / phone camera to verify address)_
 
-📦 *SOLD ITEM NAME & PRICE:*
-${order.items.map((it, idx) => `• Item ${idx + 1}: ${it.productTitle} [${it.code || '1-of-1'}] — £${it.price.toFixed(2)} (Qty: ${it.quantity}, Size: ${it.size})`).join('\n')}
+📦 *5. ITEM DETAILS*
+${order.items.map((it, idx) => `• *Item ${idx + 1}:* ${it.productTitle} [${it.code || '1-of-1'}]\n  - *Price:* £${it.price.toFixed(2)} (Qty: ${it.quantity}, Size: ${it.size})`).join('\n')}
+• Condition: Pre-Loved / Excellent (Unique 1-of-1 Piece)
 
-💰 *TOTAL TRANSACTION PAID:*
-£${order.total.toFixed(2)} GBP (Items: £${order.subtotal.toFixed(2)} + Shipping: £${order.shipping.toFixed(2)})
+${order.items.map((it, idx) => `📸 *Photo ${idx + 1} (${it.productTitle}):*\n${it.image}`).join('\n\n')}
 
-📸 *SOLD ITEM PHOTO:*
-${order.items.map((it, idx) => `• Photo ${idx + 1} (${it.productTitle}):\n${it.image}`).join('\n\n')}
+🚚 *6. SHIPPING COMPANY (CHOSEN BY BUYER)*
+• Selected Courier: *${order.carrierName || 'Evri Standard Delivery'}* (${order.shipping === 0 ? 'FREE Shipping' : `£${order.shipping.toFixed(2)}`})
+• Dispatch SLA: Dispatched within 24 Hours Tracked
 
-🚚 *SHIPPING COMPANY (CHOSEN BY BUYER):*
-${order.carrierName || 'Evri Standard Delivery'} (${order.shipping === 0 ? 'FREE Shipping' : `£${order.shipping.toFixed(2)}`})
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✨ *Ready for 24h courier dispatch.*`;
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔒 *1-OF-1 INVENTORY ACTION:*
+Item permanently archived & deleted from active storefront.
+🇬🇧 *Style & Class London · styleandclass.store*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
   const storePhone = '447591878215';
   const effectiveWhatsAppUrl = `https://api.whatsapp.com/send?phone=${storePhone}&text=${encodeURIComponent(fullAlertText)}`;
@@ -199,6 +221,49 @@ ${order.carrierName || 'Evri Standard Delivery'} (${order.shipping === 0 ? 'FREE
                 <span>{copied ? 'Full Report Copied!' : 'Copy WhatsApp Report'}</span>
               </button>
             </div>
+          </div>
+
+          {/* VERIFIED BUYER REVIEW SUBMISSION CARD */}
+          <div className="p-4 sm:p-5 bg-gradient-to-br from-[#d4a853]/15 via-[#13151f] to-[#0e1017] border border-[#d4a853]/40 rounded-2xl space-y-3 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5 text-[#d4a853]">
+                <div className="w-8 h-8 rounded-full bg-[#d4a853] text-black flex items-center justify-center font-bold">
+                  <Star className="w-4 h-4 fill-black text-black" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-white">
+                    Leave a Verified Buyer Review
+                  </h4>
+                  <p className="text-[11px] text-[#d4a853] font-bold">
+                    Official Buyer Review &middot; Certified as Order #{order.id}
+                  </p>
+                </div>
+              </div>
+
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
+                Verified Purchase
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              As a verified buyer of <strong>{order.items[0]?.productTitle} [{order.items[0]?.code || '1-of-1'}]</strong>, your rating and comment will be published with the official <strong>Verified UK Buyer</strong> badge on Style &amp; Class London.
+            </p>
+
+            {reviewSubmitted ? (
+              <div className="p-3 bg-emerald-950/60 border border-emerald-800 text-emerald-300 rounded-xl flex items-center gap-2 text-xs font-bold">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Thank you! Your Verified Buyer Review is now live on the Product Detail page.</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsReviewModalOpen(true)}
+                className="w-full py-3 px-4 bg-gradient-to-r from-[#d4a853] to-[#c29642] hover:brightness-110 text-black font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Star className="w-4 h-4 fill-black text-black" />
+                <span>Submit Your Verified Buyer Review &amp; Star Rating</span>
+              </button>
+            )}
           </div>
 
           {/* 1-Piece Rule Auto-Removal Notice */}
@@ -503,6 +568,16 @@ ${order.carrierName || 'Evri Standard Delivery'} (${order.shipping === 0 ? 'FREE
           </div>
         </div>
       </div>
+
+      {/* Verified Buyer Review Submission Modal */}
+      <VerifiedBuyerReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+        order={order}
+        onReviewSubmitted={() => {
+          setReviewSubmitted(true);
+        }}
+      />
     </div>
   );
 };

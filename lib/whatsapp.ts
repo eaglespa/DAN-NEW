@@ -1,6 +1,15 @@
 import axios from 'axios';
 import { getStoreWhatsAppNumber } from './config.js';
 
+export interface OrderItemDetail {
+  title: string;
+  code?: string;
+  price: number;
+  quantity: number;
+  photoUrl?: string;
+  size?: string;
+}
+
 export interface OrderNotificationPayload {
   orderId: string;
   itemName: string;
@@ -14,45 +23,99 @@ export interface OrderNotificationPayload {
   shippingCompany: string;
   barcodeUrl?: string;
   barcodeBase64OrUrl?: string;
+  items?: OrderItemDetail[];
+  subtotal?: number;
+  shippingCost?: number;
+  total?: number;
+  date?: string;
 }
 
 /**
- * Builds the comprehensive WhatsApp report containing all required fields.
+ * Builds the official, prestigiously designed WhatsApp report containing all 6 required fields
+ * plus company emblem, luxury branding, payment confirmation, and barcode links.
  */
 export function buildDetailedOrderReport(order: OrderNotificationPayload): string {
-  const currencySymbol = order.itemCurrency === 'GBP' ? '£' : order.itemCurrency;
+  const currencySymbol = order.itemCurrency === 'GBP' ? '£' : (order.itemCurrency || '£');
   const paymentLabel = order.paymentMethod.toLowerCase().includes('card')
-    ? 'Credit / Debit Card (Direct Bank Card Settlement)'
-    : 'PayPal UK (Express / Pay in 3)';
+    ? 'Credit / Debit Card (Bank Card Settlement)'
+    : 'PayPal UK (Express / Pay in 3 / Balance)';
+
+  const formattedDate = order.date || new Date().toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const totalFormatted = (order.total || order.itemPrice).toFixed(2);
+  const cleanPhone = (order.buyerPhone || '').replace(/[^0-9]/g, '');
+  const cleanBuyerPhoneLink = cleanPhone ? `https://wa.me/${cleanPhone}` : 'N/A';
+
+  // Format multiple items or single item
+  let itemsSection = '';
+  let photosSection = '';
+  if (order.items && order.items.length > 0) {
+    itemsSection = order.items.map((it, idx) => 
+      `• *Item ${idx + 1}:* ${it.title} [${it.code || '1-of-1'}]\n  - *Price:* ${currencySymbol}${it.price.toFixed(2)} (Qty: ${it.quantity}${it.size ? `, Size: ${it.size}` : ''})`
+    ).join('\n');
+
+    photosSection = order.items.map((it, idx) => 
+      `📸 *Photo ${idx + 1} (${it.title}):*\n${it.photoUrl || order.itemPhotoUrl}`
+    ).join('\n\n');
+  } else {
+    itemsSection = `• *Name:* ${order.itemName}\n• *Price:* ${currencySymbol}${order.itemPrice.toFixed(2)}`;
+    photosSection = `📸 *Photo:*\n${order.itemPhotoUrl}`;
+  }
 
   return (
-`🛍️ *STYLE & CLASS LONDON — NEW PAID ORDER ALERT*
-━━━━━━━━━━━━━━━━━━━━━━━━
+`👑 *STYLE & CLASS LONDON* 👑
+_Curated Pre-Loved Luxury Fashion · London, United Kingdom_
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚜️ *OFFICIAL ORDER DISPATCH ALERT* ⚜️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 🧾 *ORDER ID:* #${order.orderId}
-💳 *BUYER PAYMENT METHOD:* ${paymentLabel} (PAID & VERIFIED)
+📅 *DATE:* ${formattedDate}
+💳 *PAYMENT METHOD:* ${paymentLabel} (PAID & VERIFIED)
+💰 *TOTAL PAID:* ${currencySymbol}${totalFormatted} GBP
 
-👤 *BUYER INFORMATION*
-• *Buyer Name:* ${order.buyerName}
-• *Buyer Address:* ${order.buyerAddress}
-• *Buyer Phone Number:* ${order.buyerPhone}
+👤 *1. BUYER NAME*
+• Full Name: *${order.buyerName}*
 
-📦 *SOLD ITEM DETAILS*
-• *Sold Item Name:* ${order.itemName}
-• *Sold Item Price:* ${currencySymbol}${order.itemPrice.toFixed(2)}
-• *Sold Item Photo:* ${order.itemPhotoUrl}
+📍 *2. BUYER ADDRESS*
+• Delivery Address: *${order.buyerAddress}*
+• Country: United Kingdom (GB)
 
-🚚 *SHIPPING COMPANY (CHOSEN BY BUYER)*
-• *Courier:* ${order.shippingCompany}
+📞 *3. BUYER PHONE NUMBER*
+• Contact Phone: *${order.buyerPhone}*
+• Direct WhatsApp: ${cleanBuyerPhoneLink}
 
-🏷️ *BUYER ADDRESS (BARCODE FOR COURIER)*
-• *Scannable Barcode:* ${order.barcodeUrl || 'Scannable on receipt & packing slip'}
-━━━━━━━━━━━━━━━━━━━━━━━━
-✨ *Dispatch within 24h as per Style & Class UK shipping promise.*`
+🏷️ *4. BUYER ADDRESS (BARCODE FOR COURIER)*
+• Scannable Barcode URL:
+${order.barcodeUrl || 'https://styleandclass.store'}
+_(Scan directly with courier scanner / phone camera to verify address)_
+
+📦 *5. ITEM DETAILS*
+${itemsSection}
+• Condition: Pre-Loved / Excellent (Unique 1-of-1 Piece)
+
+${photosSection}
+
+🚚 *6. SHIPPING COMPANY (CHOSEN BY BUYER)*
+• Selected Courier: *${order.shippingCompany}*
+• Dispatch SLA: Dispatched within 24 Hours Tracked
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔒 *1-OF-1 INVENTORY ACTION:*
+Item permanently archived & deleted from active storefront.
+🇬🇧 *Style & Class London · styleandclass.store*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
   );
 }
 
 /**
- * Generates direct WhatsApp click-to-chat URL targeting store WhatsApp number.
+ * Generates direct WhatsApp click-to-chat URL targeting store WhatsApp number (+44 7591 878215).
  */
 export function generateWhatsAppChatUrl(order: OrderNotificationPayload): string {
   const storePhone = getStoreWhatsAppNumber();
@@ -115,7 +178,7 @@ export async function sendOrderAlertToWhatsApp(order: OrderNotificationPayload) 
     }
   }
 
-  console.info('[WhatsApp Alert Generated]');
+  console.info('[Official WhatsApp Alert Generated for +44 7591 878215]');
   console.info(reportText);
 
   return {

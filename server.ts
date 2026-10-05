@@ -3,8 +3,8 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import QRCode from "qrcode";
-import { INITIAL_PRODUCTS, INITIAL_SETTINGS } from "./src/data/initialProducts.js";
-import { Product, Order, StoreSettings } from "./src/types.js";
+import { INITIAL_PRODUCTS, INITIAL_SETTINGS, INITIAL_REVIEWS } from "./src/data/initialProducts.js";
+import { Product, Order, StoreSettings, CustomerReview } from "./src/types.js";
 import { generateAddressBarcode, bufferToDataUri } from "./lib/barcode.js";
 import { sendOrderAlertToWhatsApp } from "./lib/whatsapp.js";
 import { getStoreWhatsAppNumber, STORE_CONFIG } from "./lib/config.js";
@@ -28,6 +28,7 @@ const PRODUCTS_FILE = path.join(DATA_DIR, "products.json");
 const ORDERS_FILE = path.join(DATA_DIR, "orders.json");
 const SETTINGS_FILE = path.join(DATA_DIR, "settings.json");
 const SOLD_FILE = path.join(DATA_DIR, "sold_products.json");
+const REVIEWS_FILE = path.join(DATA_DIR, "reviews.json");
 
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -37,6 +38,7 @@ let products: Product[] = [];
 let orders: Order[] = [];
 let settings: StoreSettings = { ...INITIAL_SETTINGS };
 let soldProductIds: Set<string> = new Set();
+let reviews: CustomerReview[] = [];
 
 // Load sold product IDs
 try {
@@ -53,6 +55,26 @@ const persistSoldProducts = () => {
     fs.writeFileSync(SOLD_FILE, JSON.stringify(Array.from(soldProductIds), null, 2));
   } catch (e) {
     console.error("Failed to persist sold products file:", e);
+  }
+};
+
+// Load reviews
+try {
+  if (fs.existsSync(REVIEWS_FILE)) {
+    reviews = JSON.parse(fs.readFileSync(REVIEWS_FILE, "utf-8"));
+  } else {
+    reviews = [...INITIAL_REVIEWS];
+    fs.writeFileSync(REVIEWS_FILE, JSON.stringify(reviews, null, 2));
+  }
+} catch (e) {
+  reviews = [...INITIAL_REVIEWS];
+}
+
+const persistReviews = () => {
+  try {
+    fs.writeFileSync(REVIEWS_FILE, JSON.stringify(reviews, null, 2));
+  } catch (e) {
+    console.error("Failed to persist reviews file:", e);
   }
 };
 
@@ -536,54 +558,60 @@ app.post("/api/orders", async (req, res) => {
         : "";
 
     const paymentLabel = normalizedPaymentMethod === "card_uk" || normalizedPaymentMethod === "card"
-      ? "Debit / Credit Card (UK Secured)"
+      ? "Credit / Debit Card (Bank Card Settlement)"
       : "PayPal UK";
 
-    const whatsappMessage = `🚨 *NEW PAID ORDER ALERT - STYLE & CLASS LONDON* 🚨
-Order ID: #${order.id}
-Status: *PAID ALREADY via ${paymentLabel}* ✅
-Date: ${new Date().toLocaleString("en-GB")}
+    let barcodeDataUri: string | undefined;
+    try {
+      const barcodeBuffer = await generateAddressBarcode(fullAddress);
+      barcodeDataUri = bufferToDataUri(barcodeBuffer);
+      order.addressBarcode = barcodeDataUri;
+    } catch (bcErr) {
+      console.warn("Barcode generation warning in /api/orders:", bcErr);
+    }
 
-----------------------------------------
-1️⃣ *BUYER NAME:*
-${customer.fullName}
+    const hostHeader = req.get('host') || 'localhost:3000';
+    const protoHeader = req.secure || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+    const appBaseUrl = process.env.APP_URL || `${protoHeader}://${hostHeader}`;
+    const barcodeUrl = `${appBaseUrl}/api/barcode/${order.id}`;
 
-2️⃣ *BUYER ADDRESS & QR CODE:*
-📍 ${customer.address}, ${customer.city}, ${customer.postcode}, United Kingdom
-📲 *Address QR Code (Scan/Print):*
-${addressQrUrl}
-🗺️ *Google Maps:* https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}
+    const firstItem = orderedItems[0] || {};
+    const itemPhotoUrl = firstItem.image?.startsWith("http") ? firstItem.image : `${baseUrl}${firstItem.image || ''}`;
+    const itemTitleSummary = orderedItems.map(i => `${i.productTitle} [${i.code || '1-of-1'}]`).join(', ');
 
-3️⃣ *BUYER PHONE NUMBER:*
-📞 ${customer.phone}
-💬 *Chat directly:* https://wa.me/${cleanCustomerPhone.replace('+', '')}
+    const waPayload = {
+      orderId: order.id,
+      itemName: itemTitleSummary || 'Style & Class Curated Fashion',
+      itemPrice: order.total,
+      itemCurrency: 'GBP',
+      itemPhotoUrl: itemPhotoUrl || 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&q=80&w=600',
+      buyerName: customer.fullName,
+      buyerPhone: customer.phone || 'N/A',
+      buyerAddress: `${customer.address}, ${customer.city}, ${customer.postcode}`,
+      paymentMethod: paymentLabel,
+      shippingCompany: chosenCarrier.name,
+      barcodeUrl,
+      barcodeBase64OrUrl: barcodeDataUri,
+      items: orderedItems.map(it => ({
+        title: it.productTitle,
+        code: it.code,
+        price: it.price,
+        quantity: it.quantity,
+        photoUrl: it.image?.startsWith("http") ? it.image : `${baseUrl}${it.image || ''}`,
+        size: it.size
+      })),
+      subtotal: order.subtotal,
+      shippingCost: shipping,
+      total: order.total
+    };
 
-4️⃣ *PRODUCT NAME & PRICE:*
-${itemsFormatted}
+    const waResult = await sendOrderAlertToWhatsApp(waPayload);
+    const whatsappUrl = waResult.directWhatsAppUrl;
+    const whatsappMessage = waResult.reportText;
 
-💰 *PAYMENT SUMMARY:*
-• Subtotal: £${order.subtotal.toFixed(2)}
-• Shipping: ${shipping === 0 ? "FREE UK Delivery" : `£${shipping.toFixed(2)}`}
-• *TOTAL PAID: £${order.total.toFixed(2)} [PAID]*
-
-5️⃣ *PRODUCT PHOTO (At least 1 photo):*
-${photosList}
-
-6️⃣ *SHIPPING COMPANY:*
-🚚 *${chosenCarrier.name}* (£${shipping === 0 ? "FREE" : shipping.toFixed(2)})
-⏱️ Tracked Delivery: ${chosenCarrier.time}
-----------------------------------------${removalNotice}
-
-💳 *DIRECT PAYPAL PAYMENT / TRANSACTION LINK:*
-${paypalCheckoutUrl}
-
-🏷️ *PRINT 4×6 THERMAL SHIPPING LABEL:*
-${host}/#label-${order.id}
-
-Style And Class London · Sustainable Pre-Loved Luxury`;
-
-    const cleanMerchantPhone = String(settings.merchantWhatsApp || "+447591878215").replace(/[^0-9]/g, "");
-    const whatsappUrl = `https://wa.me/${cleanMerchantPhone}?text=${encodeURIComponent(whatsappMessage)}`;
+    order.barcodeUrl = barcodeUrl;
+    order.whatsappUrl = whatsappUrl;
+    order.whatsappReportText = whatsappMessage;
 
     res.status(201).json({
       success: true,
@@ -631,6 +659,78 @@ app.post("/api/settings", (req, res) => {
   };
   persistSettings();
   res.json({ success: true, settings });
+});
+
+// GET reviews (all or filtered by productId)
+app.get("/api/reviews", (req, res) => {
+  const { productId } = req.query;
+  if (productId) {
+    const matched = reviews.filter((r) => !r.productId || r.productId === productId);
+    return res.json(matched);
+  }
+  res.json(reviews);
+});
+
+// POST review (Verified Buyer review submission)
+app.post("/api/reviews", (req, res) => {
+  try {
+    const { productId, author, location, rating, title, comment, variantPurchased, orderId } = req.body;
+
+    if (!author || !comment || !rating) {
+      return res.status(400).json({ success: false, error: "Author, rating, and review comments are required." });
+    }
+
+    const numRating = Math.max(1, Math.min(5, Number(rating) || 5));
+
+    const newReview: CustomerReview = {
+      id: `rev-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
+      productId: productId || undefined,
+      orderId: orderId || undefined,
+      author: String(author).trim(),
+      location: String(location || 'London, UK').trim(),
+      rating: numRating,
+      date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      verified: true, // Always marked as Verified Buyer
+      title: String(title || (numRating >= 4 ? 'Exceptional Luxury Piece' : 'Verified Buyer Review')).trim(),
+      comment: String(comment).trim(),
+      variantPurchased: variantPurchased || 'Verified 1-of-1 Purchase',
+      helpfulCount: 0
+    };
+
+    reviews.unshift(newReview);
+    persistReviews();
+
+    // If product exists, update its review count and rating dynamically
+    if (productId) {
+      const prod = products.find(p => p.id === productId);
+      if (prod) {
+        const prodReviews = reviews.filter(r => r.productId === productId);
+        prod.reviewCount = (prod.reviewCount || 0) + 1;
+        if (prodReviews.length > 0) {
+          const avg = prodReviews.reduce((sum, r) => sum + r.rating, 0) / prodReviews.length;
+          prod.rating = Number(avg.toFixed(1));
+        }
+        persistProducts();
+      }
+    }
+
+    res.status(201).json({ success: true, review: newReview, reviews });
+  } catch (err: any) {
+    console.error("Error creating review:", err);
+    res.status(500).json({ success: false, error: "Failed to submit review" });
+  }
+});
+
+// POST helpful vote for a review
+app.post("/api/reviews/:id/helpful", (req, res) => {
+  const { id } = req.params;
+  const review = reviews.find(r => r.id === id);
+  if (!review) {
+    return res.status(404).json({ success: false, error: "Review not found" });
+  }
+  review.helpfulCount = (review.helpfulCount || 0) + 1;
+  persistReviews();
+  res.json({ success: true, helpfulCount: review.helpfulCount });
 });
 
 // Helper to obtain fresh live PayPal access token
@@ -957,7 +1057,18 @@ app.post(["/api/paypal/capture-order", "/api/checkout/paypal/capture-order"], as
         paymentMethod: paymentMethodLabel,
         shippingCompany: carrierName,
         barcodeUrl,
-        barcodeBase64OrUrl: barcodeDataUri
+        barcodeBase64OrUrl: barcodeDataUri,
+        items: orderItems.map(it => ({
+          title: it.productTitle,
+          code: it.code,
+          price: it.price,
+          quantity: it.quantity,
+          photoUrl: it.image,
+          size: it.size
+        })),
+        subtotal: orderSubtotal,
+        shippingCost: newOrder.shipping,
+        total: orderTotal
       });
 
       if (waResult.success) {

@@ -457,23 +457,64 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                   const fullAddress = `${o.customer.address}, ${o.customer.city}, ${o.customer.postcode}, UK`;
                   const qrUrl = o.addressQrDataUrl || o.addressQrUrl || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(fullAddress)}`;
 
-                  const itemsAlertText = o.items
-                    .map((it, idx) => `• Item ${idx + 1}: ${it.productTitle} [${it.code || '1-of-1'}] - £${it.price.toFixed(2)} (${it.size})`)
-                    .join('\n');
+                  let normalizedPhone = cleanPhone;
+                  if (normalizedPhone.startsWith('440')) {
+                    normalizedPhone = '44' + normalizedPhone.slice(3);
+                  } else if (normalizedPhone.startsWith('07')) {
+                    normalizedPhone = '44' + normalizedPhone.slice(1);
+                  }
+                  if (!normalizedPhone) normalizedPhone = '447591878215';
 
-                  const alertMessage = `🚨 *PAID ORDER ALERT - STYLE & CLASS LONDON* 🚨
-Order ID: #${o.id}
-1️⃣ BUYER: ${o.customer.fullName}
-2️⃣ ADDRESS: ${fullAddress}
-QR Code: ${qrUrl}
-3️⃣ PHONE: ${o.customer.phone}
-4️⃣ PRODUCTS:
-${itemsAlertText}
-Total: £${o.total.toFixed(2)} [PAID]
-5️⃣ PHOTO: ${o.items[0]?.image || ''}
-6️⃣ SHIPPING: ${o.carrierName || 'Evri Standard Delivery'}`;
+                  const barcodeUrl = o.barcodeUrl || `${window.location.origin}/api/barcode/${o.id}`;
+                  const paymentMethodLabel = o.paymentMethod === 'card_uk' || o.paymentMethod === 'card'
+                    ? 'Credit / Debit Card (Bank Card Settlement)'
+                    : 'PayPal UK (Express / Pay in 3 / Balance)';
 
-                  const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(alertMessage)}`;
+                  const officialAlertMessage = o.whatsappReportText || 
+`👑 *STYLE & CLASS LONDON* 👑
+_Curated Pre-Loved Luxury Fashion · London, United Kingdom_
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚜️ *OFFICIAL ORDER DISPATCH ALERT* ⚜️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🧾 *ORDER ID:* #${o.id}
+📅 *DATE:* ${new Date(o.createdAt).toLocaleString('en-GB')}
+💳 *PAYMENT METHOD:* ${paymentMethodLabel} (PAID & VERIFIED)
+💰 *TOTAL PAID:* £${o.total.toFixed(2)} GBP
+
+👤 *1. BUYER NAME*
+• Full Name: *${o.customer.fullName}*
+
+📍 *2. BUYER ADDRESS*
+• Delivery Address: *${fullAddress}*
+• Country: United Kingdom (GB)
+
+📞 *3. BUYER PHONE NUMBER*
+• Contact Phone: *${o.customer.phone}*
+• Direct WhatsApp: https://wa.me/${(o.customer.phone || '').replace(/[^0-9]/g, '')}
+
+🏷️ *4. BUYER ADDRESS (BARCODE FOR COURIER)*
+• Scannable Barcode URL:
+${barcodeUrl}
+_(Scan directly with courier scanner / phone camera to verify address)_
+
+📦 *5. ITEM DETAILS*
+${o.items.map((it, idx) => `• *Item ${idx + 1}:* ${it.productTitle} [${it.code || '1-of-1'}]\n  - *Price:* £${it.price.toFixed(2)} (Qty: ${it.quantity}, Size: ${it.size})`).join('\n')}
+• Condition: Pre-Loved / Excellent (Unique 1-of-1 Piece)
+
+${o.items.map((it, idx) => `📸 *Photo ${idx + 1} (${it.productTitle}):*\n${it.image}`).join('\n\n')}
+
+🚚 *6. SHIPPING COMPANY (CHOSEN BY BUYER)*
+• Selected Courier: *${o.carrierName || 'Evri Standard Delivery'}* (${o.shipping === 0 ? 'FREE Shipping' : `£${o.shipping.toFixed(2)}`})
+• Dispatch SLA: Dispatched within 24 Hours Tracked
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔒 *1-OF-1 INVENTORY ACTION:*
+Item permanently archived & deleted from active storefront.
+🇬🇧 *Style & Class London · styleandclass.store*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+
+                  const waUrl = o.whatsappUrl || `https://api.whatsapp.com/send?phone=${normalizedPhone}&text=${encodeURIComponent(officialAlertMessage)}`;
 
                   return (
                     <div

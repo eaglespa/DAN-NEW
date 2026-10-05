@@ -1,0 +1,52 @@
+[
+  {
+    "id": "rev-1791220908368-256",
+    "productId": "prod-w-4",
+    "orderId": "SAC-436192",
+    "author": "Victoria Sterling",
+    "location": "Mayfair, London",
+    "rating": 5,
+    "date": "05 Oct 2026",
+    "verified": true,
+    "title": "Breathtaking garment & authentic luxury finish",
+    "comment": "Received this exquisite piece wrapped with utmost care. The stitching and material condition are immaculate. Evri tracking delivered to my door in 48 hours. Style & Class London has earned my highest recommendation!",
+    "variantPurchased": "Floral Wrap Midi Dress [BOX 1-5]",
+    "helpfulCount": 1
+  },
+  {
+    "id": "rev-1",
+    "author": "Charlotte M.",
+    "location": "Kensington, London",
+    "rating": 5,
+    "date": "14 Sep 2026",
+    "verified": true,
+    "title": "Remarkable Kate Spade quality — like new!",
+    "comment": "I bought the Kate Spade piece and could not believe how pristine it was. Packed safely with Evri delivery arriving in 2 days. Truly sustainable luxury with soul!",
+    "variantPurchased": "BOX 1-2 (US 2 / UK 6)",
+    "helpfulCount": 28
+  },
+  {
+    "id": "rev-2",
+    "author": "Gemma H.",
+    "location": "Manchester, UK",
+    "rating": 5,
+    "date": "10 Sep 2026",
+    "verified": true,
+    "title": "1-of-1 vintage treasure with WhatsApp instant updates",
+    "comment": "Loved that as soon as I paid with PayPal UK, Dan from Style & Class WhatsApped me with my tracking number and carrier dispatch photo. Knowing the item gets removed so nobody else can take it gave me total peace of mind.",
+    "variantPurchased": "BOX 1 -1 (UK 22)",
+    "helpfulCount": 19
+  },
+  {
+    "id": "rev-3",
+    "author": "Eleanor T.",
+    "location": "Bristol, UK",
+    "rating": 5,
+    "date": "05 Sep 2026",
+    "verified": true,
+    "title": "The dark green leather handbag is gorgeous!",
+    "comment": "Described as New Without Tags and it genuinely is. Gold hardware still has factory gloss. InPost locker collection made pickup super easy.",
+    "variantPurchased": "BOX 1-4 Handbag",
+    "helpfulCount": 22
+  }
+]

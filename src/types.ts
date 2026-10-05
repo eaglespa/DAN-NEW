@@ -89,6 +89,8 @@ export interface Order {
   addressQrUrl?: string;
   addressBarcode?: string;
   barcodeUrl?: string;
+  whatsappUrl?: string;
+  whatsappReportText?: string;
   paypalCheckoutUrl?: string;
   cardSummary?: {
     brand: string;
@@ -123,6 +125,8 @@ export interface StoreSettings {
 
 export interface CustomerReview {
   id: string;
+  productId?: string;
+  orderId?: string;
   author: string;
   location: string;
   rating: number;

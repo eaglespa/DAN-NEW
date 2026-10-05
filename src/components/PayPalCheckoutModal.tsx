@@ -279,23 +279,19 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
         onInstantDelete(productIdsToDelete);
       }
 
-      const cleanWa = (merchantWhatsApp || '+447591878215').replace(/[^0-9+]/g, '').replace('+', '');
-      const methodLabel = paymentMethod === 'card_uk' ? 'Credit/Debit Card' : 'PayPal UK';
-      const waText = encodeURIComponent(
-        `Hello Style & Class London! I have paid for order #${data.order.id} for £${data.order.total.toFixed(
-          2
-        )} via ${methodLabel}. Reference: ${data.captureId}. Please dispatch to ${fullNameRef.current} (${postcodeRef.current}).`
-      );
-      const whatsappUrl = `https://wa.me/${cleanWa}?text=${waText}`;
+      const whatsappUrl = data.whatsappUrl || `https://api.whatsapp.com/send?phone=447591878215&text=${encodeURIComponent(data.whatsappReportText || '')}`;
 
-      setCompletedOrder({
-        order: data.order,
-        directPayPalUrl: `https://www.paypal.com/activity/payment/${data.captureId}`,
-        whatsappUrl,
-        captureId: data.captureId
-      });
+      // Allow PayPal SDK's internal promise resolution to complete cleanly before unmounting/transitioning
+      setTimeout(() => {
+        setCompletedOrder({
+          order: data.order,
+          directPayPalUrl: `https://www.paypal.com/activity/payment/${data.captureId}`,
+          whatsappUrl,
+          captureId: data.captureId
+        });
 
-      onOrderSuccess(data.order, whatsappUrl, productIdsToDelete);
+        onOrderSuccess(data.order, whatsappUrl, productIdsToDelete);
+      }, 250);
     } catch (err: any) {
       setErrorMessage('⚠️ ' + (err.message || 'Payment capture error. Please contact Style & Class support.'));
     } finally {
@@ -459,7 +455,7 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
         </div>
 
         {/* SUCCESS RECEIPT VIEW */}
-        {completedOrder ? (
+        {completedOrder && (
           <div className="p-6 text-center space-y-4 animate-fade-in">
             <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30 shadow-lg">
               <CheckCircle2 className="w-8 h-8" />
@@ -576,9 +572,10 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
               </button>
             </div>
           </div>
-        ) : (
-          /* CHECKOUT FORM VIEW */
-          <div className="p-5 sm:p-6 space-y-4 text-xs">
+        )}
+
+        {/* CHECKOUT FORM VIEW */}
+        <div className={completedOrder ? 'hidden' : 'p-5 sm:p-6 space-y-4 text-xs'}>
             {errorMessage && (
               <div className="p-3 bg-red-950/70 text-red-300 rounded-xl border border-red-800 flex items-center gap-2 font-medium animate-shake">
                 <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
@@ -832,8 +829,7 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
               <span>Real Live UK Bank Settlements &middot; Instant 1-of-1 Stock Removal</span>
             </div>
           </div>
-        )}
+        </div>
       </div>
-    </div>
   );
 };
