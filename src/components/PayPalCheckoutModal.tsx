@@ -29,6 +29,8 @@ interface PayPalCheckoutModalProps {
   merchantWhatsApp: string;
   initialCarrier?: string;
   initialPaymentMethod?: 'paypal' | 'card';
+  initialDiscountCode?: string;
+  initialDiscountPercent?: number;
   onInstantDelete?: (productIds: string[]) => void;
   onOrderSuccess: (order: Order, whatsappUrl: string, removedProducts: string[]) => void;
 }
@@ -42,6 +44,8 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
   merchantWhatsApp,
   initialCarrier = 'evri',
   initialPaymentMethod = 'card',
+  initialDiscountCode,
+  initialDiscountPercent,
   onInstantDelete,
   onOrderSuccess
 }) => {
@@ -116,7 +120,17 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
     royalmail: { name: 'Royal Mail 48 Tracked (£3.65)', cost: 3.65, time: '2 Working Days' }
   };
 
-  const subtotal = items.reduce((acc, it) => acc + it.product.price * it.quantity, 0);
+  const [voucherCode, setVoucherCode] = useState(initialDiscountCode || '');
+  const [discountPercent, setDiscountPercent] = useState<number>(initialDiscountPercent || 0);
+
+  useEffect(() => {
+    if (initialDiscountCode) setVoucherCode(initialDiscountCode);
+    if (initialDiscountPercent) setDiscountPercent(initialDiscountPercent);
+  }, [initialDiscountCode, initialDiscountPercent]);
+
+  const rawSubtotal = items.reduce((acc, it) => acc + it.product.price * it.quantity, 0);
+  const discountAmount = discountPercent > 0 ? (rawSubtotal * discountPercent) / 100 : 0;
+  const subtotal = Math.max(0, rawSubtotal - discountAmount);
   const selectedRate = carrierRates[carrier] || carrierRates['evri'];
   const shipping = subtotal >= 45.0 ? 0 : selectedRate.cost;
   const total = Number((subtotal + shipping).toFixed(2));

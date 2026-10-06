@@ -1,6 +1,8 @@
 import React from 'react';
 import { Star, Truck, ShieldCheck, RefreshCw, MessageCircle, AlertTriangle, CheckCircle2, Ruler, Flame, Clock, Tag, CreditCard, Lock } from 'lucide-react';
 import { Product } from '../types';
+import { TrustBadges } from './TrustBadges';
+import { BNPLCalculator } from './BNPLCalculator';
 
 interface ProductInfoProps {
   product: Product;
@@ -119,6 +121,9 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
           </div>
         )}
       </div>
+
+      {/* Buy Now Pay Later (BNPL) Installment Calculator */}
+      <BNPLCalculator price={product.price} currencySymbol={currencySymbol} />
 
       {/* 1-Piece / Inventory Automation Notice (CRITICAL MANDATE) */}
       <div className="p-4 bg-gradient-to-r from-red-950/40 via-amber-950/20 to-red-950/40 border border-red-500/40 rounded-2xl text-red-200 space-y-1.5">
@@ -249,13 +254,15 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
         </div>
       ) : (
         <div className="flex flex-col gap-2.5 pt-2">
-          {/* Primary Add to Cart Button */}
+          {/* Primary Add to Cart Button (Optimized for Mobile Touch) */}
           <button
             id="product-add-to-bag-btn"
             type="button"
             onClick={onAddToCart}
-            className="w-full py-4 px-6 rounded-2xl bg-[#d4a853] hover:bg-[#e8c97a] text-black font-extrabold text-sm sm:text-base tracking-wide shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+            style={{ touchAction: 'manipulation', minHeight: '52px' }}
+            className="w-full py-4 px-6 rounded-2xl bg-[#d4a853] hover:bg-[#e8c97a] active:scale-98 text-black font-extrabold text-sm sm:text-base tracking-wide shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer select-none"
           >
+            <Lock className="w-4 h-4 text-black hidden xs:inline" />
             <span>ADD TO SHOPPING BAG</span>
             <span>&bull;</span>
             <span>{currencySymbol}{product.price.toFixed(2)}</span>
@@ -268,7 +275,8 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
               id="product-card-buy-btn"
               type="button"
               onClick={onBuyWithCard || onBuyWithPayPal}
-              className="w-full py-3.5 px-4 rounded-2xl bg-[#181b28] hover:bg-[#202538] text-white font-bold text-xs sm:text-sm tracking-wide border border-[#d4a853]/60 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-md"
+              style={{ touchAction: 'manipulation', minHeight: '48px' }}
+              className="w-full py-3.5 px-4 rounded-2xl bg-[#181b28] hover:bg-[#202538] active:scale-98 text-white font-bold text-xs sm:text-sm tracking-wide border border-[#d4a853]/60 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-md select-none"
             >
               <CreditCard className="w-4 h-4 text-[#d4a853]" />
               <span>Pay with Card</span>
@@ -279,7 +287,8 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
               id="product-paypal-buy-btn"
               type="button"
               onClick={onBuyWithPayPal}
-              className="w-full py-3.5 px-4 rounded-2xl bg-[#ffc439] hover:bg-[#ffb000] text-[#003087] font-black text-xs sm:text-sm tracking-wide shadow-md transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+              style={{ touchAction: 'manipulation', minHeight: '48px' }}
+              className="w-full py-3.5 px-4 rounded-2xl bg-[#ffc439] hover:bg-[#ffb000] active:scale-98 text-[#003087] font-black text-xs sm:text-sm tracking-wide shadow-md transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer select-none"
             >
               <span>Buy with</span>
               <span className="italic font-black text-[#003087]">Pay</span>
@@ -292,7 +301,8 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
             id="product-whatsapp-order-btn"
             type="button"
             onClick={onOrderViaWhatsApp}
-            className="w-full py-3.5 px-6 rounded-2xl bg-[#25D366] hover:bg-[#20ba5a] text-black font-extrabold text-sm tracking-wide shadow-md transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+            style={{ touchAction: 'manipulation', minHeight: '48px' }}
+            className="w-full py-3.5 px-6 rounded-2xl bg-[#25D366] hover:bg-[#20ba5a] active:scale-98 text-black font-extrabold text-sm tracking-wide shadow-md transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer select-none"
           >
             <MessageCircle className="w-4 h-4 fill-black text-black" />
             <span>Order via WhatsApp (+44 7591 878215)</span>
@@ -300,24 +310,9 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
         </div>
       )}
 
-      {/* Trust Badges Stack */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-[11px] text-slate-400">
-        <div className="flex items-center gap-1.5 bg-[#13151f] p-2.5 rounded-xl border border-slate-800">
-          <Truck className="w-3.5 h-3.5 text-[#d4a853] shrink-0" />
-          <span>UK 24h Dispatch</span>
-        </div>
-        <div className="flex items-center gap-1.5 bg-[#13151f] p-2.5 rounded-xl border border-slate-800">
-          <RefreshCw className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-          <span>7-Day UK Returns</span>
-        </div>
-        <div className="flex items-center gap-1.5 bg-[#13151f] p-2.5 rounded-xl border border-slate-800">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-          <span>Buyer Protection</span>
-        </div>
-        <div className="flex items-center gap-1.5 bg-[#13151f] p-2.5 rounded-xl border border-slate-800">
-          <MessageCircle className="w-3.5 h-3.5 text-[#25D366] shrink-0" />
-          <span>Live Support</span>
-        </div>
+      {/* Certified Trust Badges & Buyer Protection */}
+      <div className="pt-2">
+        <TrustBadges variant="compact" />
       </div>
     </div>
   );

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "ac-1791317238423-rncyz",
+    "email": "test@example.com",
+    "phone": "",
+    "items": [
+      {
+        "productId": "BOX 1-1",
+        "productTitle": "Ralph Lauren Silk Dress",
+        "price": 45,
+        "quantity": 1
+      }
+    ],
+    "subtotal": 45,
+    "discountCode": "STYLE10",
+    "discountPercent": 10,
+    "createdAt": "2026-10-06T20:07:18.423Z",
+    "status": "captured"
+  }
+]

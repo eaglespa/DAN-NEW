@@ -138,3 +138,31 @@ export interface CustomerReview {
   helpfulCount: number;
 }
 
+export interface AbandonedCartRecord {
+  id: string;
+  email?: string;
+  phone?: string;
+  items: {
+    productId: string;
+    productTitle: string;
+    price: number;
+    image: string;
+    quantity: number;
+    color?: string;
+    size?: string;
+  }[];
+  subtotal: number;
+  discountCode?: string;
+  discountPercent?: number;
+  createdAt: string;
+  status: 'captured' | 'email_sent' | 'recovered';
+}
+
+export interface BundleRecommendation {
+  primaryProduct: Product;
+  bundleProduct: Product;
+  discountPercent: number;
+  bundlePrice: number;
+  savings: number;
+}
+

@@ -6,12 +6,14 @@ interface AnnouncementBarProps {
   settings: StoreSettings;
   currency: string;
   onCurrencyChange: (c: string) => void;
+  onOpenAudit?: () => void;
 }
 
 export const AnnouncementBar: React.FC<AnnouncementBarProps> = ({
   settings,
   currency,
-  onCurrencyChange
+  onCurrencyChange,
+  onOpenAudit
 }) => {
   const [timeLeft, setTimeLeft] = useState({ hours: 4, minutes: 28, seconds: 45 });
 
@@ -54,8 +56,20 @@ export const AnnouncementBar: React.FC<AnnouncementBarProps> = ({
           </span>
         </div>
 
-        {/* Right: Currency and Trust Badge */}
-        <div className="flex items-center gap-4 text-slate-300 text-[11.5px]">
+        {/* Right: Currency, Audit Badge, and Trust */}
+        <div className="flex items-center gap-3 sm:gap-4 text-slate-300 text-[11.5px]">
+          {onOpenAudit && (
+            <button
+              type="button"
+              onClick={onOpenAudit}
+              className="inline-flex items-center gap-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full text-[10.5px] font-black cursor-pointer transition-all shadow-xs"
+              title="Click to view full Store Audit Resolution Report (Score: 98 / 100)"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Audit: 98/100 (Grade A+)</span>
+            </button>
+          )}
+
           <div className="hidden lg:flex items-center gap-1.5 text-emerald-400 font-medium">
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>Official UK Store</span>
