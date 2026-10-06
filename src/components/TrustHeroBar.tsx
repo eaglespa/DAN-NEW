@@ -30,7 +30,7 @@ export const TrustHeroBar: React.FC<TrustHeroBarProps> = ({ onOpenReviews, class
         </div>
 
         {/* Divider */}
-        <span className="text-slate-700 hidden md:inline">&vert;</span>
+        <span className="h-3 w-px bg-slate-800 hidden md:inline-block shrink-0" aria-hidden="true" />
 
         {/* Trust Item 2: 256-Bit Bank-Grade SSL */}
         <div className="flex items-center gap-1.5 text-slate-300 shrink-0">
@@ -40,7 +40,7 @@ export const TrustHeroBar: React.FC<TrustHeroBarProps> = ({ onOpenReviews, class
         </div>
 
         {/* Divider */}
-        <span className="text-slate-700 hidden md:inline">&vert;</span>
+        <span className="h-3 w-px bg-slate-800 hidden md:inline-block shrink-0" aria-hidden="true" />
 
         {/* Trust Item 3: 14-Day Money-Back Guarantee */}
         <div className="flex items-center gap-1.5 text-slate-300 shrink-0">
@@ -50,7 +50,7 @@ export const TrustHeroBar: React.FC<TrustHeroBarProps> = ({ onOpenReviews, class
         </div>
 
         {/* Divider */}
-        <span className="text-slate-700 hidden md:inline">&vert;</span>
+        <span className="h-3 w-px bg-slate-800 hidden md:inline-block shrink-0" aria-hidden="true" />
 
         {/* Trust Item 4: Dispatch SLA */}
         <div className="flex items-center gap-1.5 text-slate-300 shrink-0">
@@ -60,7 +60,7 @@ export const TrustHeroBar: React.FC<TrustHeroBarProps> = ({ onOpenReviews, class
         </div>
 
         {/* Divider */}
-        <span className="text-slate-700 hidden xl:inline">&vert;</span>
+        <span className="h-3 w-px bg-slate-800 hidden xl:inline-block shrink-0" aria-hidden="true" />
 
         {/* Trust Item 5: Authenticity */}
         <div className="hidden xl:flex items-center gap-1.5 text-slate-300 shrink-0">

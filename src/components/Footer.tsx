@@ -252,18 +252,6 @@ export const Footer: React.FC<FooterProps> = ({
                   <span>Cookie Policy</span>
                 </button>
               </li>
-              {onOpenAudit && (
-                <li>
-                  <button
-                    type="button"
-                    onClick={onOpenAudit}
-                    className="text-emerald-400 hover:text-emerald-300 font-bold transition-colors flex items-center gap-1.5 text-left cursor-pointer"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Store Audit: 98/100 (Grade A+)</span>
-                  </button>
-                </li>
-              )}
             </ul>
           </div>
         </div>

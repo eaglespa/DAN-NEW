@@ -760,7 +760,6 @@ ${itemsText}
         settings={settings}
         currency={currency}
         onCurrencyChange={setCurrency}
-        onOpenAudit={() => setIsAuditModalOpen(true)}
       />
 
       {/* Main Header with full Style And Class menus */}
@@ -772,7 +771,6 @@ ${itemsText}
         cartCount={cart.reduce((a, b) => a + b.quantity, 0)}
         onOpenCart={() => setIsCartOpen(true)}
         onOpenAdmin={handleRequestAdminAccess}
-        onOpenAudit={() => setIsAuditModalOpen(true)}
         onSelectProduct={handleSelectProduct}
         products={activeProducts}
         merchantWhatsApp={settings.merchantWhatsApp}
@@ -1170,7 +1168,6 @@ ${itemsText}
       {/* Footer with full navigation, social links, legal modals, and support */}
       <Footer
         onOpenAdmin={handleRequestAdminAccess}
-        onOpenAudit={() => setIsAuditModalOpen(true)}
         settings={settings}
         onNavigate={handleNavigate}
         onOpenLegal={(policy) => setLegalPolicyType(policy)}
