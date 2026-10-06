@@ -1,117 +1,5 @@
 [
   {
-    "id": "prod-w-5",
-    "code": "BOX 1-6",
-    "sku": "BOX 1-6",
-    "title": "Cashmere Blend Ribbed Cardigan",
-    "slug": "cashmere-blend-ribbed-cardigan-other-stories",
-    "brand": "& Other Stories",
-    "condition": "New Without Tags",
-    "collection": "women",
-    "category": "Knitwear",
-    "price": 32,
-    "compareAtPrice": 95,
-    "currency": "GBP",
-    "currencySymbol": "£",
-    "rating": 4.9,
-    "reviewCount": 12,
-    "stock": 1,
-    "status": "active",
-    "featured": false,
-    "material": "70% Wool, 30% Cashmere",
-    "sizes": [
-      "UK 10 / M"
-    ],
-    "colors": [
-      {
-        "name": "Oatmeal Melange",
-        "hex": "#d8cca3",
-        "imageIndex": 0
-      }
-    ],
-    "tags": [
-      "Cardigan",
-      "Cashmere",
-      "Neutral",
-      "Luxury Knit",
-      "Winter"
-    ],
-    "images": [
-      "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=800&auto=format&fit=crop&q=80",
-      "https://images.unsplash.com/photo-1584273143981-41c073dfe8f8?w=800&auto=format&fit=crop&q=80"
-    ],
-    "bulletPoints": [
-      "Super soft cashmere-wool blend ribbed cardigan with horn-effect buttons.",
-      "New Without Tags condition — ultra-soft touch with zero pilling.",
-      "Relaxed chic London fit for effortless layering.",
-      "1-of-1 exclusive piece."
-    ],
-    "description": "Premium cashmere and wool blend cardigan from & Other Stories. Luxurious warm oatmeal tone with chunky ribbed texture and deep V-neckline.",
-    "specifications": {
-      "Brand": "& Other Stories",
-      "Box / Item Code": "BOX 1-6",
-      "Condition Grade": "New Without Tags",
-      "Size": "UK 10 / Medium",
-      "Stock": "1 of 1"
-    }
-  },
-  {
-    "id": "prod-men-1",
-    "code": "M0001",
-    "sku": "M0001",
-    "title": "Classic British Trench Coat",
-    "slug": "classic-british-trench-coat-mens-m0001",
-    "brand": "Aquascutum London",
-    "condition": "Excellent",
-    "collection": "men",
-    "category": "Outerwear",
-    "price": 68,
-    "compareAtPrice": 95,
-    "currency": "GBP",
-    "currencySymbol": "£",
-    "rating": 4.9,
-    "reviewCount": 11,
-    "stock": 1,
-    "status": "active",
-    "featured": true,
-    "material": "Water-resistant Cotton Gabardine",
-    "sizes": [
-      "UK 40 / L"
-    ],
-    "colors": [
-      {
-        "name": "Classic Khaki Honey",
-        "hex": "#c2a67e",
-        "imageIndex": 0
-      }
-    ],
-    "tags": [
-      "Men",
-      "Coat",
-      "Vintage",
-      "London",
-      "Waterproof"
-    ],
-    "images": [
-      "https://images.unsplash.com/photo-1544441893-675973e31985?w=800&auto=format&fit=crop&q=80",
-      "https://images.unsplash.com/photo-1516257984-b1b4d707412e?w=800&auto=format&fit=crop&q=80"
-    ],
-    "bulletPoints": [
-      "Iconic British double-breasted trench silhouette with storm flap and buckled belt.",
-      "Pure heritage styling in vintage honey tan.",
-      "Cleaned, inspected, and waterproof-reproofed.",
-      "1-of-1 pre-loved piece."
-    ],
-    "description": "Vintage British menswear trench coat. Timeless tailoring with epaulets, belted cuffs, and deep storm-welt pockets. Ready for wet London autumns or stylish city layering.",
-    "specifications": {
-      "Brand": "Aquascutum London",
-      "Collection": "Men's Vintage",
-      "Condition Grade": "Excellent Vintage",
-      "Size": "UK 40 / Chest 40-42 inch",
-      "Stock": "1 of 1"
-    }
-  },
-  {
     "id": "prod-men-2",
     "code": "M0002",
     "sku": "M0002",
@@ -125,8 +13,8 @@
     "compareAtPrice": 85,
     "currency": "GBP",
     "currencySymbol": "£",
-    "rating": 4.9,
-    "reviewCount": 14,
+    "rating": 5,
+    "reviewCount": 15,
     "stock": 1,
     "status": "active",
     "featured": false,

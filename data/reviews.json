@@ -1,5 +1,19 @@
 [
   {
+    "id": "rev-1791312809385-283",
+    "productId": "prod-men-2",
+    "orderId": "SAC-907863",
+    "author": "Audrey Hepburn",
+    "location": "Belgravia, London",
+    "rating": 5,
+    "date": "06 Oct 2026",
+    "verified": true,
+    "title": "Pristine luxury piece & lightning-fast delivery",
+    "comment": "Arrived packaged like a gift from Harrods. Hand-inspected quality and immediate WhatsApp courier updates.",
+    "variantPurchased": "Heritage Oxford Cotton Button-Down Shirt [M0002]",
+    "helpfulCount": 0
+  },
+  {
     "id": "rev-1791220908368-256",
     "productId": "prod-w-4",
     "orderId": "SAC-436192",

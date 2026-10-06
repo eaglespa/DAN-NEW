@@ -58,6 +58,13 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
   const [processingStatus, setProcessingStatus] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState('');
   const [sdkLoaded, setSdkLoaded] = useState(false);
+  
+  // Direct Card fields
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
+  const [cardHolder, setCardHolder] = useState('');
+
   const [effectiveClientId, setEffectiveClientId] = useState<string>(
     paypalClientId || 'BAAhhnSf00f00xNNYjsVnZoo0dVIAV76hZPo5AzXLCM1uJA5PU4IyrVb2vdeYVLTVgVbM-n_Gu7lNoWZow'
   );
@@ -67,6 +74,33 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
     whatsappUrl: string;
     captureId?: string;
   } | null>(null);
+
+  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, '').slice(0, 16);
+    const formatted = raw.replace(/(\d{4})(?=\d)/g, '$1 ');
+    setCardNumber(formatted);
+  };
+
+  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let raw = e.target.value.replace(/\D/g, '').slice(0, 4);
+    if (raw.length >= 3) {
+      raw = raw.slice(0, 2) + '/' + raw.slice(2);
+    }
+    setCardExpiry(raw);
+  };
+
+  const handleCvvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, '').slice(0, 4);
+    setCardCvv(raw);
+  };
+
+  const getCardBrand = () => {
+    const num = cardNumber.replace(/\s/g, '');
+    if (num.startsWith('4')) return 'Visa';
+    if (num.startsWith('5') || num.startsWith('2')) return 'Mastercard';
+    if (num.startsWith('34') || num.startsWith('37')) return 'American Express';
+    return 'Bank Card';
+  };
 
   // References to DOM button containers
   const cardContainerRef = useRef<HTMLDivElement>(null);
@@ -198,6 +232,174 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
     return true;
   };
 
+  // Direct UK Card Payment Handler
+  const handleDirectCardPayment = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!validateDeliveryDetails()) return;
+
+    const rawNum = cardNumber.replace(/\s/g, '');
+    if (rawNum.length < 15) {
+      setErrorMessage('⚠️ Please enter a valid debit or credit card number (16 digits).');
+      return;
+    }
+    if (cardExpiry.length < 5 || !cardExpiry.includes('/')) {
+      setErrorMessage('⚠️ Please enter a valid card expiry date (MM/YY).');
+      return;
+    }
+    if (cardCvv.length < 3) {
+      setErrorMessage('⚠️ Please enter a valid 3 or 4 digit security code (CVV).');
+      return;
+    }
+
+    setErrorMessage('');
+    setIsProcessing(true);
+    setProcessingStatus('Securing card transaction & reserving 1-of-1 piece...');
+
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          carrier: carrierRef.current,
+          items: itemsRef.current.map(it => ({
+            productId: it.product.id,
+            productTitle: it.product.title,
+            code: it.product.code,
+            quantity: it.quantity,
+            price: it.product.price,
+            image: it.product.images[0] || '',
+            size: it.selectedSize
+          })),
+          customer: {
+            fullName: fullNameRef.current.trim(),
+            phone: phoneRef.current.trim(),
+            address: addressRef.current.trim(),
+            city: cityRef.current.trim(),
+            postcode: postcodeRef.current.trim()
+          },
+          paymentMethod: 'card_uk',
+          cardSummary: {
+            brand: getCardBrand(),
+            last4: rawNum.slice(-4),
+            cardholderName: cardHolder.trim() || fullNameRef.current.trim(),
+            expiry: cardExpiry
+          }
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.order) {
+        throw new Error(data.error || 'Card payment authorization failed.');
+      }
+
+      // Instant 1-of-1 piece deletion
+      const productIdsToDelete = itemsRef.current.map(it => it.product.id);
+      try {
+        const existing = JSON.parse(localStorage.getItem('styleandclass_sold_ids') || '[]');
+        localStorage.setItem(
+          'styleandclass_sold_ids',
+          JSON.stringify(Array.from(new Set([...existing, ...productIdsToDelete])))
+        );
+      } catch (err) {}
+
+      if (onInstantDelete) {
+        onInstantDelete(productIdsToDelete);
+      }
+
+      const whatsappUrl = data.whatsappUrl || `https://api.whatsapp.com/send?phone=447591878215&text=${encodeURIComponent(data.whatsappMessage || '')}`;
+
+      setCompletedOrder({
+        order: data.order,
+        directPayPalUrl: data.paypalCheckoutUrl || '',
+        whatsappUrl,
+        captureId: `CARD-${Date.now().toString().slice(-8)}`
+      });
+
+      onOrderSuccess(data.order, whatsappUrl, productIdsToDelete);
+    } catch (err: any) {
+      console.error('Direct card payment error:', err);
+      setErrorMessage(err.message || 'Payment authorization failed. Please check card details.');
+    } finally {
+      setIsProcessing(false);
+      setProcessingStatus('');
+    }
+  };
+
+  // Direct PayPal Web Checkout Fallback
+  const handleDirectPayPalWebCheckout = async () => {
+    if (!validateDeliveryDetails()) return;
+
+    setErrorMessage('');
+    setIsProcessing(true);
+    setProcessingStatus('Creating direct PayPal UK Express checkout link...');
+
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          carrier: carrierRef.current,
+          items: itemsRef.current.map(it => ({
+            productId: it.product.id,
+            productTitle: it.product.title,
+            code: it.product.code,
+            quantity: it.quantity,
+            price: it.product.price,
+            image: it.product.images[0] || '',
+            size: it.selectedSize
+          })),
+          customer: {
+            fullName: fullNameRef.current.trim(),
+            phone: phoneRef.current.trim(),
+            address: addressRef.current.trim(),
+            city: cityRef.current.trim(),
+            postcode: postcodeRef.current.trim()
+          },
+          paymentMethod: 'paypal_uk'
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.order) {
+        throw new Error(data.error || 'Failed to initialize PayPal Express link.');
+      }
+
+      const productIdsToDelete = itemsRef.current.map(it => it.product.id);
+      try {
+        const existing = JSON.parse(localStorage.getItem('styleandclass_sold_ids') || '[]');
+        localStorage.setItem(
+          'styleandclass_sold_ids',
+          JSON.stringify(Array.from(new Set([...existing, ...productIdsToDelete])))
+        );
+      } catch (err) {}
+
+      if (onInstantDelete) {
+        onInstantDelete(productIdsToDelete);
+      }
+
+      if (data.paypalCheckoutUrl) {
+        window.open(data.paypalCheckoutUrl, '_blank', 'noopener,noreferrer');
+      }
+
+      const whatsappUrl = data.whatsappUrl || `https://api.whatsapp.com/send?phone=447591878215&text=${encodeURIComponent(data.whatsappMessage || '')}`;
+
+      setCompletedOrder({
+        order: data.order,
+        directPayPalUrl: data.paypalCheckoutUrl || '',
+        whatsappUrl,
+        captureId: data.order.id
+      });
+
+      onOrderSuccess(data.order, whatsappUrl, productIdsToDelete);
+    } catch (err: any) {
+      console.error('PayPal direct checkout error:', err);
+      setErrorMessage(err.message || 'Error connecting to PayPal.');
+    } finally {
+      setIsProcessing(false);
+      setProcessingStatus('');
+    }
+  };
+
   // Common PayPal createOrder call to server
   const handleServerCreateOrder = async () => {
     setErrorMessage('');
@@ -227,11 +429,18 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
       }
 
       setProcessingStatus('Awaiting authorization...');
+
+      // Safety timeout in case popup is dismissed or closed by buyer
+      setTimeout(() => {
+        setIsProcessing(false);
+        setProcessingStatus('');
+      }, 35000);
+
       return data.orderId;
     } catch (err: any) {
       setIsProcessing(false);
       setProcessingStatus('');
-      setErrorMessage(err.message || 'Error connecting to PayPal gateway');
+      setErrorMessage(err.message || 'Error connecting to PayPal gateway. You can use the Direct Card form or Direct PayPal Link.');
       throw err;
     }
   };
@@ -754,40 +963,127 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
                 </button>
               </div>
 
-              {/* TAB 1: DEBIT OR CREDIT CARD (REAL PAYPAL CARD GATEWAY) */}
-              <div className={activePaymentTab === 'card' ? 'space-y-3 pt-1 animate-fade-in' : 'hidden'}>
-                <div className="p-3 bg-[#0a0c14] rounded-2xl border border-slate-800 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-white flex items-center gap-1.5">
-                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                      Direct UK Card Settlement
-                    </span>
-                    <div className="flex items-center gap-1 text-[9px] font-mono font-bold">
-                      <span className="px-1.5 py-0.5 rounded bg-blue-900/60 text-blue-200 border border-blue-700">VISA</span>
-                      <span className="px-1.5 py-0.5 rounded bg-amber-900/60 text-amber-200 border border-amber-700">Mastercard</span>
-                      <span className="px-1.5 py-0.5 rounded bg-cyan-900/60 text-cyan-200 border border-cyan-700">AMEX</span>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
-                    Money is charged from your bank card and deposited straight into Style &amp; Class London&apos;s PayPal account. 
-                    <strong> No PayPal login required.</strong>
-                  </p>
-                </div>
-
+              {/* TAB 1: DEBIT OR CREDIT CARD (DIRECT UK CARD FORM & PAYPAL GATEWAY) */}
+              <div className={activePaymentTab === 'card' ? 'space-y-4 pt-1 animate-fade-in' : 'hidden'}>
                 {/* Processing Status Banner */}
                 {isProcessing && activePaymentTab === 'card' && (
                   <div className="p-3 bg-[#161a29] border border-[#d4a853]/40 rounded-xl flex items-center gap-2.5 text-[#d4a853] text-xs font-bold animate-pulse">
                     <div className="w-4 h-4 border-2 border-[#d4a853] border-t-transparent rounded-full animate-spin shrink-0" />
-                    <span>{processingStatus || 'Connecting with PayPal UK Card Processor...'}</span>
+                    <span>{processingStatus || 'Connecting with UK Card Processor...'}</span>
                   </div>
                 )}
 
-                {/* Official PayPal Card Button Container */}
-                <div className="space-y-2">
+                {/* Direct Card Entry Form */}
+                <form onSubmit={handleDirectCardPayment} className="p-4 bg-[#0a0c14] rounded-2xl border border-slate-800 space-y-3 shadow-md">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-800/80">
+                    <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <CreditCard className="w-4 h-4 text-[#d4a853]" />
+                      Direct Bank Card Payment (UK Verified)
+                    </span>
+                    <div className="flex items-center gap-1 text-[9px] font-mono font-bold">
+                      <span className={`px-1.5 py-0.5 rounded ${getCardBrand() === 'Visa' ? 'bg-blue-600 text-white font-black ring-1 ring-white' : 'bg-blue-900/40 text-blue-300'}`}>VISA</span>
+                      <span className={`px-1.5 py-0.5 rounded ${getCardBrand() === 'Mastercard' ? 'bg-amber-600 text-white font-black ring-1 ring-white' : 'bg-amber-900/40 text-amber-300'}`}>Mastercard</span>
+                      <span className={`px-1.5 py-0.5 rounded ${getCardBrand() === 'American Express' ? 'bg-cyan-600 text-white font-black ring-1 ring-white' : 'bg-cyan-900/40 text-cyan-300'}`}>AMEX</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-bold mb-1 text-[11px]">
+                      Card Number *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="cc-number"
+                        placeholder="4532 0123 4567 8910"
+                        value={cardNumber}
+                        onChange={handleCardNumberChange}
+                        maxLength={19}
+                        className="w-full text-xs p-3 pr-10 rounded-xl border border-slate-700 bg-[#06070a] text-white focus:outline-none focus:border-[#d4a853] font-mono tracking-wider"
+                      />
+                      <CreditCard className="w-4 h-4 text-slate-400 absolute right-3 top-3.5 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1 text-[11px]">
+                        Expiry Date *
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="cc-exp"
+                        placeholder="MM/YY"
+                        value={cardExpiry}
+                        onChange={handleExpiryChange}
+                        maxLength={5}
+                        className="w-full text-xs p-3 rounded-xl border border-slate-700 bg-[#06070a] text-white focus:outline-none focus:border-[#d4a853] font-mono text-center"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1 text-[11px]">
+                        Security Code (CVV) *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="password"
+                          inputMode="numeric"
+                          autoComplete="cc-csc"
+                          placeholder="•••"
+                          value={cardCvv}
+                          onChange={handleCvvChange}
+                          maxLength={4}
+                          className="w-full text-xs p-3 rounded-xl border border-slate-700 bg-[#06070a] text-white focus:outline-none focus:border-[#d4a853] font-mono text-center tracking-widest"
+                        />
+                        <Lock className="w-3.5 h-3.5 text-slate-500 absolute right-3 top-3.5 pointer-events-none" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-bold mb-1 text-[11px]">
+                      Name on Card
+                    </label>
+                    <input
+                      type="text"
+                      autoComplete="cc-name"
+                      placeholder={fullName || "Cardholder full name"}
+                      value={cardHolder}
+                      onChange={(e) => setCardHolder(e.target.value)}
+                      className="w-full text-xs p-3 rounded-xl border border-slate-700 bg-[#06070a] text-white focus:outline-none focus:border-[#d4a853]"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isProcessing}
+                    className="w-full py-3.5 px-4 bg-gradient-to-r from-[#d4a853] to-[#c29642] hover:brightness-110 disabled:opacity-50 text-black font-extrabold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer text-xs sm:text-sm mt-1"
+                  >
+                    <Lock className="w-4 h-4 text-black" />
+                    <span>
+                      {isProcessing ? (processingStatus || 'Authorizing...') : `Pay ${currencySymbol}${total.toFixed(2)} via Bank Card`}
+                    </span>
+                  </button>
+                  <p className="text-[10px] text-slate-400 text-center">
+                    Instant UK settlement &middot; Immediate 1-of-1 piece inventory archiving
+                  </p>
+                </form>
+
+                {/* Secondary Option: PayPal Guest Card Gateway */}
+                <div className="space-y-2 pt-1">
+                  <div className="relative flex py-1 items-center">
+                    <div className="flex-grow border-t border-slate-800"></div>
+                    <span className="flex-shrink mx-3 text-[10px] text-slate-500 font-bold uppercase tracking-wider">or pay via PayPal Card Guest Checkout</span>
+                    <div className="flex-grow border-t border-slate-800"></div>
+                  </div>
+
                   {!sdkLoaded && (
-                    <div className="p-4 bg-[#0a0a0f] border border-slate-800 rounded-2xl text-center text-slate-400 flex items-center justify-center gap-2">
+                    <div className="p-3 bg-[#0a0a0f] border border-slate-800 rounded-xl text-center text-slate-400 flex items-center justify-center gap-2 text-xs">
                       <div className="w-4 h-4 border-2 border-[#d4a853] border-t-transparent rounded-full animate-spin" />
-                      <span>Initializing secure UK card checkout...</span>
+                      <span>Loading PayPal buttons...</span>
                     </div>
                   )}
                   <div ref={cardContainerRef} id="paypal-card-button-container" className="w-full min-h-[48px]" />
@@ -806,6 +1102,19 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
                   </p>
                 </div>
 
+                {/* Direct PayPal Express Web Link Button */}
+                <button
+                  type="button"
+                  onClick={handleDirectPayPalWebCheckout}
+                  disabled={isProcessing}
+                  className="w-full py-3 px-4 bg-[#ffc439] hover:bg-[#ffb000] disabled:opacity-50 text-[#003087] font-black rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
+                >
+                  <span className="italic font-black text-[#0079C1]">Pay</span>
+                  <span className="italic font-black text-[#00457C] -ml-1">Pal</span>
+                  <span>Instant Checkout Link ({currencySymbol}{total.toFixed(2)})</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-[#003087]" />
+                </button>
+
                 {/* Processing Status Banner */}
                 {isProcessing && activePaymentTab === 'paypal' && (
                   <div className="p-3 bg-[#161a29] border border-[#ffc439]/40 rounded-xl flex items-center gap-2.5 text-[#ffc439] text-xs font-bold animate-pulse">
@@ -814,13 +1123,22 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
                   </div>
                 )}
 
-                {!sdkLoaded && (
-                  <div className="p-4 bg-[#0a0a0f] border border-slate-800 rounded-2xl text-center text-slate-400 flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-[#ffc439] border-t-transparent rounded-full animate-spin" />
-                    <span>Connecting with PayPal...</span>
+                {/* Secondary Option: PayPal Smart Buttons */}
+                <div className="space-y-2 pt-1">
+                  <div className="relative flex py-1 items-center">
+                    <div className="flex-grow border-t border-slate-800"></div>
+                    <span className="flex-shrink mx-3 text-[10px] text-slate-500 font-bold uppercase tracking-wider">or authenticate in PayPal popup</span>
+                    <div className="flex-grow border-t border-slate-800"></div>
                   </div>
-                )}
-                <div ref={paypalContainerRef} id="paypal-smart-buttons-container" className="w-full min-h-[48px]" />
+
+                  {!sdkLoaded && (
+                    <div className="p-4 bg-[#0a0a0f] border border-slate-800 rounded-2xl text-center text-slate-400 flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-[#ffc439] border-t-transparent rounded-full animate-spin" />
+                      <span>Connecting with PayPal...</span>
+                    </div>
+                  )}
+                  <div ref={paypalContainerRef} id="paypal-smart-buttons-container" className="w-full min-h-[48px]" />
+                </div>
               </div>
             </div>
 

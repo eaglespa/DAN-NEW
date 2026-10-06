@@ -859,6 +859,10 @@ app.post(["/api/paypal/create-order", "/api/checkout/paypal/create-order"], asyn
       };
     }
 
+    const hostHeader = req.get('host') || 'localhost:3000';
+    const protoHeader = req.secure || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+    const appBaseUrl = process.env.APP_URL || `${protoHeader}://${hostHeader}`;
+
     const orderRes = await fetch("https://api-m.paypal.com/v2/checkout/orders", {
       method: "POST",
       headers: {
@@ -871,8 +875,10 @@ app.post(["/api/paypal/create-order", "/api/checkout/paypal/create-order"], asyn
         purchase_units: [purchaseUnit],
         application_context: {
           brand_name: "Style & Class London",
-          shipping_preference: customer?.address ? "SET_PROVIDED_ADDRESS" : "NO_SHIPPING",
-          user_action: "PAY_NOW"
+          shipping_preference: "NO_SHIPPING",
+          user_action: "PAY_NOW",
+          return_url: `${appBaseUrl}/#checkout-success`,
+          cancel_url: `${appBaseUrl}/#checkout-cancel`
         }
       })
     });
