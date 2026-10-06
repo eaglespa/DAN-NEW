@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Truck, ShieldCheck, RefreshCw, MessageCircle, AlertTriangle, CheckCircle2, Ruler, Flame, Clock, Tag, CreditCard } from 'lucide-react';
+import { Star, Truck, ShieldCheck, RefreshCw, MessageCircle, AlertTriangle, CheckCircle2, Ruler, Flame, Clock, Tag, CreditCard, Lock } from 'lucide-react';
 import { Product } from '../types';
 
 interface ProductInfoProps {
@@ -219,14 +219,33 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
 
       {/* CTA Buttons: Add to Bag, Card, PayPal UK, and WhatsApp */}
       {product.stock <= 0 || product.status === 'archived' || product.status === 'sold' ? (
-        <div className="p-5 rounded-2xl bg-red-950/40 border-2 border-red-600/50 text-center space-y-2.5 my-2">
-          <div className="inline-flex items-center gap-2 bg-red-600 text-white text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-md">
-            <span>●</span>
-            <span>SOLD OUT · 1-OF-1 PIECE</span>
+        <div className="p-6 rounded-2xl bg-gradient-to-br from-red-950/60 via-red-900/40 to-[#0e1017] border-2 border-red-600/80 text-center space-y-4 my-2 shadow-2xl animate-fade-in">
+          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600 to-rose-700 text-white text-xs font-black px-4 py-2 rounded-xl uppercase tracking-widest shadow-xl border border-red-400">
+            <Lock className="w-4 h-4 text-white" />
+            <span>SOLD OUT · 1-OF-1 PIECE ARCHIVED</span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-300 font-medium">
-            This unique pre-loved piece has been purchased and permanently removed from our active inventory.
-          </p>
+          <div className="space-y-1">
+            <h4 className="text-sm font-bold text-white">This exclusive piece has been purchased &amp; paid.</h4>
+            <p className="text-xs text-slate-300">
+              Style &amp; Class operates on unique 1-of-1 pre-loved garments. Once an item is bought, it cannot be duplicated.
+            </p>
+          </div>
+          <div className="pt-2 flex flex-col sm:flex-row gap-2">
+            <a
+              href="#store-catalog"
+              className="flex-1 py-3 px-4 rounded-xl bg-[#d4a853] hover:bg-[#e8c97a] text-black font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer"
+            >
+              <span>Explore Available 1-of-1 Pieces</span>
+            </a>
+            <button
+              type="button"
+              onClick={onOrderViaWhatsApp}
+              className="py-3 px-4 rounded-xl bg-[#25D366] hover:bg-[#20ba5a] text-black font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer"
+            >
+              <MessageCircle className="w-4 h-4 fill-black" />
+              <span>Ask for Similar Style</span>
+            </button>
+          </div>
         </div>
       ) : (
         <div className="flex flex-col gap-2.5 pt-2">

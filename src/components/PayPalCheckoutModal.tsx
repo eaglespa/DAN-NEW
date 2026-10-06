@@ -156,8 +156,6 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
       setErrorMessage('');
       setProcessingStatus('');
       setCompletedOrder(null);
-      cardRenderedRef.current = false;
-      paypalRenderedRef.current = false;
     }
   }, [isOpen, initialCarrier, initialPaymentMethod]);
 
@@ -514,9 +512,8 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
     if (!isOpen || !sdkLoaded || !window.paypal) return;
 
     // Render Card Button into cardContainerRef
-    if (cardContainerRef.current && !cardRenderedRef.current) {
+    if (cardContainerRef.current && !cardRenderedRef.current && cardContainerRef.current.children.length === 0) {
       try {
-        cardContainerRef.current.innerHTML = '';
         window.paypal
           .Buttons({
             fundingSource: window.paypal.FUNDING.CARD,
@@ -543,7 +540,7 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
               console.error('PayPal Card Button Error:', err);
               setIsProcessing(false);
               setProcessingStatus('');
-              setErrorMessage('Card payment cancelled or authorization failed.');
+              setErrorMessage('Card payment cancelled or authorization failed. You can use the Direct Card Form above.');
             }
           })
           .render(cardContainerRef.current)
@@ -552,8 +549,7 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
           })
           .catch((err: any) => {
             console.warn('Could not render dedicated card button, rendering standard buttons:', err);
-            if (cardContainerRef.current) {
-              cardContainerRef.current.innerHTML = '';
+            if (cardContainerRef.current && cardContainerRef.current.children.length === 0) {
               window.paypal
                 .Buttons({
                   style: { layout: 'vertical', color: 'black', shape: 'rect', height: 48 },
@@ -575,9 +571,8 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
     }
 
     // Render PayPal Button into paypalContainerRef
-    if (paypalContainerRef.current && !paypalRenderedRef.current) {
+    if (paypalContainerRef.current && !paypalRenderedRef.current && paypalContainerRef.current.children.length === 0) {
       try {
-        paypalContainerRef.current.innerHTML = '';
         window.paypal
           .Buttons({
             fundingSource: window.paypal.FUNDING.PAYPAL,
@@ -604,7 +599,7 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
               console.error('PayPal Button Error:', err);
               setIsProcessing(false);
               setProcessingStatus('');
-              setErrorMessage('PayPal transaction was cancelled or encountered an error.');
+              setErrorMessage('PayPal transaction was cancelled or encountered an error. You can use Direct Card payment above.');
             }
           })
           .render(paypalContainerRef.current)
@@ -618,12 +613,15 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
         console.warn('Error setting up PayPal buttons:', err);
       }
     }
-  }, [isOpen, sdkLoaded, activePaymentTab]);
-
-  if (!isOpen) return null;
+  }, [isOpen, sdkLoaded]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in">
+    <div
+      aria-hidden={!isOpen}
+      className={`fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto transition-all duration-200 ${
+        isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none hidden'
+      }`}
+    >
       <div className="bg-[#13151f] text-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-[#d4a853]/40 my-auto">
         {/* Header */}
         <div className="p-4 sm:p-5 bg-[#090a0f] border-b border-slate-800 flex items-center justify-between">

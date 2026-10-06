@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Search, Sparkles, Filter, Eye, ShoppingBag, Tag, CheckCircle2, AlertTriangle, ArrowUpDown, ChevronLeft, ChevronRight, Truck } from 'lucide-react';
+import { Search, Sparkles, Filter, Eye, ShoppingBag, Tag, CheckCircle2, AlertTriangle, ArrowUpDown, ChevronLeft, ChevronRight, Truck, Lock } from 'lucide-react';
 import { Product, StoreSettings } from '../types';
 import { ProductCardSlideshow } from './ProductCardSlideshow';
 
@@ -29,6 +29,7 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc' | 'condition'>('featured');
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
+  const [availabilityFilter, setAvailabilityFilter] = useState<'all' | 'available' | 'sold'>('all');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showAllMode, setShowAllMode] = useState<boolean>(false);
   const ITEMS_PER_PAGE = 24;
@@ -42,7 +43,7 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
   // Reset to page 1 whenever filters change
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [activeCollection, searchQuery, sortBy, selectedBrand]);
+  }, [activeCollection, searchQuery, sortBy, selectedBrand, availabilityFilter]);
 
   const handleCollectionChange = (colId: string) => {
     setActiveCollection(colId);
@@ -57,12 +58,28 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
     return ['all', ...Array.from(new Set(list))];
   }, [products]);
 
+  // Overall counts for availability
+  const availableCount = useMemo(() => {
+    return products.filter(p => p.status !== 'sold' && p.stock > 0 && p.status !== 'archived').length;
+  }, [products]);
+
+  const soldCount = useMemo(() => {
+    return products.filter(p => p.status === 'sold' || p.stock <= 0 || p.status === 'archived').length;
+  }, [products]);
+
   // Filter & Sort
   const filteredProducts = useMemo(() => {
     return products
       .filter(p => {
-        // Status filter
-        if (p.status !== 'active' || p.stock <= 0) return false;
+        const isSold = p.status === 'sold' || p.stock <= 0 || p.status === 'archived';
+
+        // Availability filter
+        if (availabilityFilter === 'available' && isSold) {
+          return false;
+        }
+        if (availabilityFilter === 'sold' && !isSold) {
+          return false;
+        }
 
         // Collection filter
         if (activeCollection !== 'all') {
@@ -187,26 +204,71 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
 
       {/* Catalog Controls: Collections & Search Bar */}
       <div className="space-y-4 mb-8">
-        {/* Collection Filter Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-          {collections.map(col => {
-            const isActive = activeCollection === col.id;
-            return (
-              <button
-                key={col.id}
-                id={`filter-collection-${col.id}`}
-                type="button"
-                onClick={() => handleCollectionChange(col.id)}
-                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer ${
-                  isActive
-                    ? 'bg-[#d4a853] text-[#0a0a0a] shadow-lg shadow-[#d4a853]/20 scale-102'
-                    : 'bg-[#13151f] text-slate-300 hover:text-white hover:bg-[#1a1d2b] border border-slate-800'
-                }`}
-              >
-                <span>{col.label}</span>
-              </button>
-            );
-          })}
+        {/* Collection & Availability Filter Row */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {/* Collection Filter Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none flex-grow">
+            {collections.map(col => {
+              const isActive = activeCollection === col.id;
+              return (
+                <button
+                  key={col.id}
+                  id={`filter-collection-${col.id}`}
+                  type="button"
+                  onClick={() => handleCollectionChange(col.id)}
+                  className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer ${
+                    isActive
+                      ? 'bg-[#d4a853] text-[#0a0a0a] shadow-lg shadow-[#d4a853]/20 scale-102'
+                      : 'bg-[#13151f] text-slate-300 hover:text-white hover:bg-[#1a1d2b] border border-slate-800'
+                  }`}
+                >
+                  <span>{col.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Availability Filter Toggle (All / Available Only / Sold Archive) */}
+          <div className="flex items-center gap-1 bg-[#0a0c14] p-1 rounded-xl border border-slate-800 text-xs shrink-0 self-start sm:self-auto">
+            <button
+              id="filter-avail-all"
+              type="button"
+              onClick={() => setAvailabilityFilter('all')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                availabilityFilter === 'all'
+                  ? 'bg-[#d4a853] text-black shadow-sm font-black'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              All Pieces ({products.length})
+            </button>
+            <button
+              id="filter-avail-available"
+              type="button"
+              onClick={() => setAvailabilityFilter('available')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                availabilityFilter === 'available'
+                  ? 'bg-emerald-500 text-black shadow-sm font-black'
+                  : 'text-emerald-400/90 hover:text-emerald-300'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Available ({availableCount})</span>
+            </button>
+            <button
+              id="filter-avail-sold"
+              type="button"
+              onClick={() => setAvailabilityFilter('sold')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                availabilityFilter === 'sold'
+                  ? 'bg-red-600 text-white shadow-sm font-black'
+                  : 'text-red-400 hover:text-red-300'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-red-400"></span>
+              <span>Sold ({soldCount})</span>
+            </button>
+          </div>
         </div>
 
         {/* Search, Brand & Sort Bar */}
@@ -299,6 +361,7 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {paginatedProducts.map((product, idx) => {
             const isCurrent = currentProduct.id === product.id;
+            const isSold = product.stock <= 0 || product.status === 'sold' || product.status === 'archived';
             const discountPct = product.compareAtPrice > product.price
               ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
               : 0;
@@ -321,7 +384,11 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
                 }}
                 whileTap={{ scale: 0.985 }}
                 className={`group relative bg-[#13151f] border rounded-2xl overflow-hidden transition-colors flex flex-col justify-between hover:shadow-2xl hover:shadow-[#d4a853]/15 cursor-pointer ${
-                  isCurrent ? 'border-[#d4a853] ring-1 ring-[#d4a853]/40' : 'border-slate-800 hover:border-[#d4a853]/60'
+                  isSold
+                    ? 'border-red-900/60 opacity-90'
+                    : isCurrent
+                    ? 'border-[#d4a853] ring-1 ring-[#d4a853]/40'
+                    : 'border-slate-800 hover:border-[#d4a853]/60'
                 }`}
               >
                 {/* Full Interactive Multi-Photo Slideshow */}
@@ -333,7 +400,7 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
                   onImageClick={() => onSelectProduct(product)}
                 >
                   {/* Badges Overlay */}
-                  <div className="absolute top-4 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
+                  <div className="absolute top-4 left-3 flex flex-col gap-1.5 z-20 pointer-events-none">
                     {/* Item Code Badge */}
                     {product.code && (
                       <span className="bg-black/85 text-[#f5c469] border border-[#d4a853]/40 text-[10.5px] font-mono font-bold px-2 py-0.5 rounded shadow-sm backdrop-blur-xs">
@@ -341,10 +408,11 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
                       </span>
                     )}
 
-                    {/* Sold Badge if sold */}
-                    {product.stock <= 0 || product.status === 'sold' || product.status === 'archived' ? (
-                      <span className="bg-red-600 text-white text-[10.5px] font-black px-2.5 py-0.5 rounded shadow-sm uppercase tracking-wider animate-pulse">
-                        SOLD
+                    {/* Prominent High-Contrast Sold Badge */}
+                    {isSold ? (
+                      <span className="bg-gradient-to-r from-red-600 to-rose-700 text-white border border-red-300 text-xs font-black px-3 py-1 rounded-md shadow-2xl uppercase tracking-widest flex items-center gap-1.5 animate-pulse">
+                        <Lock className="w-3.5 h-3.5" />
+                        <span>SOLD</span>
                       </span>
                     ) : (
                       <span className="bg-red-500/90 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-sm uppercase tracking-wider flex items-center gap-1">
@@ -366,9 +434,24 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
                     )}
                   </div>
 
+                  {/* Prominent Center Overlay when Sold */}
+                  {isSold && (
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex flex-col items-center justify-center p-3 text-center pointer-events-none z-10">
+                      <div className="bg-black/95 border-2 border-red-500/90 px-4 py-2.5 rounded-2xl shadow-2xl space-y-1">
+                        <div className="text-red-500 font-black text-sm uppercase tracking-widest flex items-center justify-center gap-1.5">
+                          <Lock className="w-4 h-4 text-red-500" />
+                          <span>SOLD OUT</span>
+                        </div>
+                        <span className="text-[10px] text-slate-300 font-bold block">
+                          Unique 1-of-1 Piece Purchased
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Discount pill */}
-                  {discountPct > 0 && (
-                    <div className="absolute top-4 right-3 bg-amber-500 text-black text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-sm z-10 pointer-events-none">
+                  {discountPct > 0 && !isSold && (
+                    <div className="absolute top-4 right-3 bg-amber-500 text-black text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-sm z-20 pointer-events-none">
                       SAVE {discountPct}%
                     </div>
                   )}
@@ -442,7 +525,7 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
                   <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
                     <div>
                       <div className="flex items-baseline gap-2">
-                        <span className="text-lg font-black text-white">
+                        <span className={`text-lg font-black ${isSold ? 'text-slate-400 line-through' : 'text-white'}`}>
                           £{product.price.toFixed(2)}
                         </span>
                         {product.compareAtPrice > product.price && (
@@ -452,14 +535,15 @@ export const StoreCatalog: React.FC<StoreCatalogProps> = ({
                         )}
                       </div>
                       <span className="text-[10px] text-emerald-400 font-medium block">
-                        Tracked UK Dispatch
+                        {isSold ? 'Dispatched to Buyer' : 'Tracked UK Dispatch'}
                       </span>
                     </div>
 
-                    {/* Add to Cart Button or SOLD Badge */}
-                    {product.stock <= 0 || product.status === 'sold' || product.status === 'archived' ? (
-                      <span className="bg-red-950/80 text-red-400 border border-red-800/80 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider">
-                        SOLD
+                    {/* Add to Cart Button or High-Contrast SOLD Badge */}
+                    {isSold ? (
+                      <span className="bg-red-950/90 text-red-300 border border-red-700/80 px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-md">
+                        <Lock className="w-3.5 h-3.5 text-red-400" />
+                        <span>SOLD</span>
                       </span>
                     ) : (
                       <motion.button

@@ -87,18 +87,20 @@ export default function App() {
           try {
             const prodData: Product[] = JSON.parse(text);
             if (Array.isArray(prodData)) {
-              // Intersect with locally cached sold IDs to guarantee immediate deletion
+              // Intersect with locally cached sold IDs to guarantee immediate sold status
               const localSold: string[] = JSON.parse(localStorage.getItem('styleandclass_sold_ids') || '[]');
               const localSoldSet = new Set(localSold);
-              const cleanProds = prodData.filter(p => !localSoldSet.has(p.id) && p.stock > 0 && p.status === 'active');
-
-              setProducts(cleanProds);
-              setCurrentProduct((prev) => {
-                if (localSoldSet.has(prev.id) || prev.stock <= 0) {
-                  return cleanProds[0] || { ...prev, stock: 0, status: 'archived' };
+              const updatedProds = prodData.map(p => {
+                if (localSoldSet.has(p.id) || p.status === 'sold' || p.stock <= 0) {
+                  return { ...p, status: 'sold' as const, stock: 0 };
                 }
-                const match = cleanProds.find((p) => p.id === prev.id);
-                return match || cleanProds[0] || { ...prev, stock: 0, status: 'archived' };
+                return p;
+              });
+
+              setProducts(updatedProds);
+              setCurrentProduct((prev) => {
+                const match = updatedProds.find((p) => p.id === prev.id);
+                return match || updatedProds[0] || { ...prev, stock: 0, status: 'sold' };
               });
             }
           } catch (jsonErr) {
@@ -343,16 +345,16 @@ export default function App() {
       localStorage.setItem('styleandclass_sold_ids', JSON.stringify(Array.from(new Set([...existing, boughtId]))));
     } catch (e) {}
 
-    // Immediately mark as sold out & remove from active store
-    setProducts((prev) => prev.filter((p) => p.id !== boughtId));
+    // Immediately mark as sold out with clear status: 'sold' and stock: 0
+    setProducts((prev) => prev.map((p) => p.id === boughtId ? { ...p, status: 'sold' as const, stock: 0 } : p));
     setCurrentProduct((prev) => {
       if (prev.id === boughtId) {
-        return { ...prev, stock: 0, status: 'archived' };
+        return { ...prev, stock: 0, status: 'sold' };
       }
       return prev;
     });
 
-    setInventoryAlert(`✓ "${boughtTitle}" has been purchased & permanently removed from the website!`);
+    setInventoryAlert(`✓ "${boughtTitle}" has been purchased & marked SOLD on the website!`);
 
     try {
       const response = await fetch('/api/orders', {
@@ -579,20 +581,25 @@ ${itemsText}
       localStorage.setItem('styleandclass_sold_ids', JSON.stringify(updated));
     } catch (e) {}
 
-    // Instantly remove bought items from website products state
-    setProducts((prev) => prev.filter((p) => !purchasedIds.has(p.id)));
+    // Mark bought items as SOLD on website products state
+    setProducts((prev) => prev.map((p) => {
+      if (purchasedIds.has(p.id)) {
+        return { ...p, status: 'sold' as const, stock: 0 };
+      }
+      return p;
+    }));
 
-    // If the product currently on detail view was purchased, update to archived/sold
+    // If the product currently on detail view was purchased, update to sold
     setCurrentProduct((prev) => {
       if (purchasedIds.has(prev.id)) {
-        return { ...prev, stock: 0, status: 'archived' };
+        return { ...prev, stock: 0, status: 'sold' };
       }
       return prev;
     });
 
     if (removedProducts && removedProducts.length > 0) {
       setInventoryAlert(
-        `✓ "${removedProducts.join(', ')}" has been purchased & permanently deleted from the website!`
+        `✓ "${removedProducts.join(', ')}" has been purchased & marked SOLD on the website!`
       );
     }
 

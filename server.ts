@@ -91,8 +91,21 @@ try {
   products = [...INITIAL_PRODUCTS];
 }
 
-// Remove any sold products from active catalog
-products = products.filter((p) => !soldProductIds.has(p.id));
+// Ensure all initial products are loaded in products array
+const existingInitialIds = new Set(products.map(p => p.id));
+INITIAL_PRODUCTS.forEach(ip => {
+  if (!existingInitialIds.has(ip.id)) {
+    products.push({ ...ip });
+  }
+});
+
+// Explicitly mark any sold products as sold with 0 stock
+products.forEach((p) => {
+  if (soldProductIds.has(p.id)) {
+    p.status = 'sold';
+    p.stock = 0;
+  }
+});
 
 try {
   if (fs.existsSync(ORDERS_FILE)) {
@@ -207,12 +220,19 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// GET products (filtered by active for store; or ?all=true for admin; supports ?limit=&page=&category=)
+// GET products (with sold items marked clearly as status: 'sold' and stock: 0)
 app.get("/api/products", (req, res) => {
-  const showAll = req.query.all === "true";
-  let result = showAll 
-    ? products.filter((p) => !soldProductIds.has(p.id))
-    : products.filter((p) => p.status === "active" && p.stock > 0 && !soldProductIds.has(p.id));
+  const hideSold = req.query.hideSold === "true";
+  let result = products.map((p) => {
+    if (soldProductIds.has(p.id)) {
+      return { ...p, status: "sold" as const, stock: 0 };
+    }
+    return p;
+  });
+
+  if (hideSold) {
+    result = result.filter((p) => p.status === "active" && p.stock > 0);
+  }
 
   const category = typeof req.query.category === 'string' ? req.query.category.toLowerCase() : '';
   if (category && category !== 'all') {
@@ -235,19 +255,18 @@ app.get("/api/products", (req, res) => {
 // GET single product by id or slug
 app.get("/api/products/:id", (req, res) => {
   const { id } = req.params;
-  if (soldProductIds.has(id)) {
-    const soldItem = INITIAL_PRODUCTS.find((p) => p.id === id || p.slug === id);
-    if (soldItem) {
-      return res.json({ ...soldItem, stock: 0, status: "sold" });
-    }
-  }
-  let product = products.find((p) => (p.id === id || p.slug === id) && !soldProductIds.has(p.id));
-  if (!product && !soldProductIds.has(id)) {
+  let product = products.find((p) => p.id === id || p.slug === id);
+  if (!product) {
     product = INITIAL_PRODUCTS.find((p) => p.id === id || p.slug === id);
   }
   if (!product) {
     return res.status(404).json({ error: "Product not found" });
   }
+
+  if (soldProductIds.has(product.id)) {
+    return res.json({ ...product, status: "sold", stock: 0 });
+  }
+
   res.json(product);
 });
 
@@ -400,12 +419,18 @@ app.post("/api/orders", async (req, res) => {
       console.log(`[STORE INVENTORY] Product "${product.title}" (${product.code || product.sku}) bought & paid. Deleted completely from website.`);
     }
 
-    // Permanently remove all purchased items from active store products and record in soldProductIds
+    // Mark all purchased items as SOLD with 0 stock and record in soldProductIds
     const purchasedProductIds = new Set(orderedItems.map((it) => it.productId));
     purchasedProductIds.forEach((id) => soldProductIds.add(id));
     persistSoldProducts();
 
-    products = products.filter((p) => !soldProductIds.has(p.id));
+    // Explicitly update status to 'sold' and stock to 0 so it is clearly displayed across the store
+    products.forEach((p) => {
+      if (soldProductIds.has(p.id)) {
+        p.status = 'sold';
+        p.stock = 0;
+      }
+    });
     persistProducts();
 
     // Carrier selection support: Evri (£2.60), InPost (£2.89), Royal Mail (£3.65)
@@ -786,15 +811,23 @@ app.post(["/api/paypal/create-order", "/api/checkout/paypal/create-order"], asyn
 
     if (Array.isArray(orderItemsParam) && orderItemsParam.length > 0) {
       for (const reqItem of orderItemsParam) {
-        const prod = products.find(p => p.id === (reqItem.id || reqItem.product?.id));
-        if (prod) {
+        const targetId = reqItem.id || reqItem.product?.id || reqItem.productId;
+        let prod = products.find(p => p.id === targetId);
+        if (!prod) {
+          prod = INITIAL_PRODUCTS.find(p => p.id === targetId);
+        }
+        const itemPrice = prod ? prod.price : (Number(reqItem.price) || Number(reqItem.product?.price) || 0);
+        const itemTitle = prod ? prod.title : (reqItem.title || reqItem.productTitle || reqItem.product?.title || "1-of-1 Piece");
+        const itemCode = prod ? prod.code : (reqItem.code || "1-of-1");
+
+        if (itemPrice > 0) {
           const qty = Number(reqItem.quantity) || 1;
-          calculatedSubtotal += prod.price * qty;
+          calculatedSubtotal += itemPrice * qty;
           verifiedItems.push({
-            name: `${prod.title} [${prod.code || '1-of-1'}]`.slice(0, 127),
+            name: `${itemTitle} [${itemCode}]`.slice(0, 127),
             unit_amount: {
               currency_code: "GBP",
-              value: prod.price.toFixed(2)
+              value: itemPrice.toFixed(2)
             },
             quantity: String(qty),
             category: "PHYSICAL_GOODS"
@@ -847,7 +880,8 @@ app.post(["/api/paypal/create-order", "/api/checkout/paypal/create-order"], asyn
       purchaseUnit.items = verifiedItems;
     }
 
-    if (customer?.address) {
+    const hasShippingAddress = Boolean(customer?.address && customer.address.trim());
+    if (hasShippingAddress) {
       purchaseUnit.shipping = {
         name: { full_name: customer.fullName || "UK Fashion Customer" },
         address: {
@@ -875,7 +909,7 @@ app.post(["/api/paypal/create-order", "/api/checkout/paypal/create-order"], asyn
         purchase_units: [purchaseUnit],
         application_context: {
           brand_name: "Style & Class London",
-          shipping_preference: "NO_SHIPPING",
+          shipping_preference: hasShippingAddress ? "SET_PROVIDED_ADDRESS" : "NO_SHIPPING",
           user_action: "PAY_NOW",
           return_url: `${appBaseUrl}/#checkout-success`,
           cancel_url: `${appBaseUrl}/#checkout-cancel`
@@ -978,9 +1012,16 @@ app.post(["/api/paypal/capture-order", "/api/checkout/paypal/capture-order"], as
       }
     }
 
-    // CRITICAL USER REQUIREMENT: 1-OF-1 INVENTORY DELETION UPON PAYMENT
+    // CRITICAL USER REQUIREMENT: Mark purchased 1-of-1 items as SOLD with 0 stock
     if (purchasedProductIds.length > 0) {
-      products = products.filter(p => !purchasedProductIds.includes(p.id));
+      purchasedProductIds.forEach(id => soldProductIds.add(id));
+      persistSoldProducts();
+      products.forEach(p => {
+        if (soldProductIds.has(p.id)) {
+          p.status = 'sold';
+          p.stock = 0;
+        }
+      });
       persistProducts();
     }
 

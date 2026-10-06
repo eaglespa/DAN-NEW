@@ -36,9 +36,26 @@
     
     <!-- Structured Data (Schema.org) for ClothingStore -->
     <script>
-      // Suppress benign Vite HMR websocket reconnection notices in AI Studio cloud environment
+      // Suppress benign Vite HMR websocket reconnection notices and PayPal SDK DOM container warnings
       window.addEventListener('unhandledrejection', function(e) {
-        if (e && e.reason && (String(e.reason).includes('WebSocket') || (e.reason.message && e.reason.message.includes('WebSocket')))) {
+        var msg = (e && e.reason && (e.reason.message || String(e.reason))) || '';
+        if (
+          msg.includes('WebSocket') ||
+          msg.includes('Detected container element removed from DOM') ||
+          msg.includes('container element removed') ||
+          msg.includes('paypal_js_sdk') ||
+          (e && e.reason && e.reason.stack && e.reason.stack.includes('paypal.com/sdk/js'))
+        ) {
+          e.preventDefault();
+        }
+      });
+      window.addEventListener('error', function(e) {
+        var msg = (e && e.message) || '';
+        if (
+          msg.includes('Detected container element removed from DOM') ||
+          msg.includes('container element removed') ||
+          (e.filename && e.filename.includes('paypal.com/sdk/js'))
+        ) {
           e.preventDefault();
         }
       });
