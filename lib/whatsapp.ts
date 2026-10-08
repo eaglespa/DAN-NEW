@@ -21,6 +21,7 @@ export interface OrderNotificationPayload {
   buyerAddress: string;
   paymentMethod: string;
   shippingCompany: string;
+  paypalCaptureId?: string;
   barcodeUrl?: string;
   barcodeBase64OrUrl?: string;
   items?: OrderItemDetail[];
@@ -31,14 +32,14 @@ export interface OrderNotificationPayload {
 }
 
 /**
- * Builds the official, prestigiously designed WhatsApp report containing all 6 required fields
- * plus company emblem, luxury branding, payment confirmation, and barcode links.
+ * Builds the official WhatsApp report containing all required fields
+ * plus luxury branding, courier barcode links, and PayPal capture ID.
  */
 export function buildDetailedOrderReport(order: OrderNotificationPayload): string {
   const currencySymbol = order.itemCurrency === 'GBP' ? '£' : (order.itemCurrency || '£');
   const paymentLabel = order.paymentMethod.toLowerCase().includes('card')
-    ? 'Credit / Debit Card (Bank Card Settlement)'
-    : 'PayPal UK (Express / Pay in 3 / Balance)';
+    ? 'Credit / Debit Card (via PayPal UK Gateway)'
+    : 'PayPal UK (Verified Fund Capture)';
 
   const formattedDate = order.date || new Date().toLocaleString('en-GB', {
     day: '2-digit',
@@ -51,6 +52,13 @@ export function buildDetailedOrderReport(order: OrderNotificationPayload): strin
   const totalFormatted = (order.total || order.itemPrice).toFixed(2);
   const cleanPhone = (order.buyerPhone || '').replace(/[^0-9]/g, '');
   const cleanBuyerPhoneLink = cleanPhone ? `https://wa.me/${cleanPhone}` : 'N/A';
+
+  const firstItem = order.items?.[0] || {
+    title: order.itemName,
+    code: '1-of-1',
+    quantity: 1,
+    price: order.itemPrice
+  };
 
   // Format multiple items or single item
   let itemsSection = '';
@@ -69,47 +77,38 @@ export function buildDetailedOrderReport(order: OrderNotificationPayload): strin
   }
 
   return (
-`👑 *STYLE & CLASS LONDON* 👑
+`🛍️ *NEW PAID ORDER*
+
+*Order:* #${order.orderId}
+*Buyer:* ${order.buyerName}
+*Phone:* ${order.buyerPhone}
+*Product:* ${firstItem.title}
+*SKU / Ref:* ${firstItem.code || '1-of-1'}
+*Quantity:* ${firstItem.quantity}
+*Price:* ${currencySymbol}${Number(firstItem.price).toFixed(2)}
+*Total:* ${currencySymbol}${totalFormatted}
+*Currency:* ${order.itemCurrency || 'GBP'}
+*Shipping Company:* ${order.shippingCompany}
+*Shipping Address:* ${order.buyerAddress}
+*Payment Method:* ${paymentLabel}
+*PayPal Transaction/Capture ID:* ${order.paypalCaptureId || 'VERIFIED'}
+*Date/Time:* ${formattedDate}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👑 *STYLE & CLASS LONDON* 👑
 _Curated Pre-Loved Luxury Fashion · London, United Kingdom_
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚜️ *OFFICIAL ORDER DISPATCH ALERT* ⚜️
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🧾 *ORDER ID:* #${order.orderId}
-📅 *DATE:* ${formattedDate}
-💳 *PAYMENT METHOD:* ${paymentLabel} (PAID & VERIFIED)
-💰 *TOTAL PAID:* ${currencySymbol}${totalFormatted} GBP
-
-👤 *1. BUYER NAME*
-• Full Name: *${order.buyerName}*
-
-📍 *2. BUYER ADDRESS*
-• Delivery Address: *${order.buyerAddress}*
-• Country: United Kingdom (GB)
-
-📞 *3. BUYER PHONE NUMBER*
-• Contact Phone: *${order.buyerPhone}*
-• Direct WhatsApp: ${cleanBuyerPhoneLink}
-
-🏷️ *4. BUYER ADDRESS (BARCODE FOR COURIER)*
-• Scannable Barcode URL:
-${order.barcodeUrl || 'https://styleandclass.store'}
-_(Scan directly with courier scanner / phone camera to verify address)_
-
-📦 *5. ITEM DETAILS*
+📦 *ALL ORDER ITEMS:*
 ${itemsSection}
-• Condition: Pre-Loved / Excellent (Unique 1-of-1 Piece)
 
 ${photosSection}
 
-🚚 *6. SHIPPING COMPANY (CHOSEN BY BUYER)*
-• Selected Courier: *${order.shippingCompany}*
-• Dispatch SLA: Dispatched within 24 Hours Tracked
+🏷️ *COURIER ADDRESS BARCODE:*
+${order.barcodeUrl || 'https://styleandclass.store'}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔒 *1-OF-1 INVENTORY ACTION:*
-Item permanently archived & deleted from active storefront.
-🇬🇧 *Style & Class London · styleandclass.store*
+🔒 *INVENTORY ACTION:*
+Purchased 1-of-1 piece permanently archived & marked sold.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
   );
 }
@@ -123,20 +122,38 @@ export function generateWhatsAppChatUrl(order: OrderNotificationPayload): string
   return `https://api.whatsapp.com/send?phone=${storePhone}&text=${encodeURIComponent(text)}`;
 }
 
+export interface WhatsAppAlertResult {
+  success: boolean;
+  providerSent: boolean;
+  status: 'sent' | 'pending' | 'failed';
+  method: 'meta_cloud_api' | 'callmebot_gateway' | 'direct_url_ready' | 'failed';
+  directWhatsAppUrl: string;
+  reportText: string;
+  error?: string;
+}
+
 /**
  * Dispatches a formatted order message along with product photo to the store WhatsApp.
+ * Accurately tracks whether an external API provider actually accepted the message.
  */
-export async function sendOrderAlertToWhatsApp(order: OrderNotificationPayload) {
+export async function sendOrderAlertToWhatsApp(order: OrderNotificationPayload): Promise<WhatsAppAlertResult> {
   const whatsappToken = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const recipientNumber = getStoreWhatsAppNumber();
   const reportText = buildDetailedOrderReport(order);
   const directWhatsAppUrl = generateWhatsAppChatUrl(order);
 
-  // If Meta WhatsApp Cloud API credentials are configured, send automatically via Meta Graph
-  if (whatsappToken && phoneNumberId) {
+  // If Meta WhatsApp Cloud API credentials are configured and not dummy placeholders
+  const isMetaConfigured = Boolean(
+    whatsappToken &&
+    phoneNumberId &&
+    !whatsappToken.startsWith('EAA...') &&
+    phoneNumberId !== '123456...'
+  );
+
+  if (isMetaConfigured) {
     try {
-      await axios.post(
+      const res = await axios.post(
         `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`,
         {
           messaging_product: 'whatsapp',
@@ -153,11 +170,32 @@ export async function sendOrderAlertToWhatsApp(order: OrderNotificationPayload) 
             Authorization: `Bearer ${whatsappToken}`,
             'Content-Type': 'application/json',
           },
+          timeout: 8000
         }
       );
-      return { success: true, directWhatsAppUrl, reportText, method: 'meta_cloud_api' };
+      if (res.status === 200 || res.status === 201) {
+        console.info(`[WhatsApp Provider] Successfully delivered via Meta Cloud API to ${recipientNumber}`);
+        return {
+          success: true,
+          providerSent: true,
+          status: 'sent',
+          method: 'meta_cloud_api',
+          directWhatsAppUrl,
+          reportText
+        };
+      }
     } catch (err: any) {
-      console.error('Meta WhatsApp Cloud API error:', err?.response?.data || err?.message);
+      const errorMsg = err?.response?.data?.error?.message || err?.message || 'Meta Cloud API error';
+      console.error('[WhatsApp Provider] Meta Cloud API error:', errorMsg);
+      return {
+        success: false,
+        providerSent: false,
+        status: 'failed',
+        method: 'meta_cloud_api',
+        directWhatsAppUrl,
+        reportText,
+        error: errorMsg
+      };
     }
   }
 
@@ -165,26 +203,38 @@ export async function sendOrderAlertToWhatsApp(order: OrderNotificationPayload) 
   const callmebotKey = process.env.CALLMEBOT_API_KEY;
   if (callmebotKey) {
     try {
-      await axios.get('https://api.callmebot.com/whatsapp.php', {
+      const cmRes = await axios.get('https://api.callmebot.com/whatsapp.php', {
         params: {
           phone: recipientNumber,
           text: reportText,
           apikey: callmebotKey
-        }
+        },
+        timeout: 8000
       });
-      return { success: true, directWhatsAppUrl, reportText, method: 'callmebot_gateway' };
+      if (cmRes.status === 200) {
+        console.info(`[WhatsApp Provider] Successfully delivered via CallMeBot to ${recipientNumber}`);
+        return {
+          success: true,
+          providerSent: true,
+          status: 'sent',
+          method: 'callmebot_gateway',
+          directWhatsAppUrl,
+          reportText
+        };
+      }
     } catch (cmErr: any) {
-      console.warn('CallMeBot notification warning:', cmErr?.message);
+      console.warn('[WhatsApp Provider] CallMeBot error:', cmErr?.message);
     }
   }
 
-  console.info('[Official WhatsApp Alert Generated for +44 7591 878215]');
-  console.info(reportText);
-
+  console.info(`[Official WhatsApp Alert Formatted for Store WhatsApp: +44 7591 878215]`);
   return {
-    success: true,
+    success: false, // Provider did not send because no automated API credentials configured
+    providerSent: false,
+    status: 'pending',
+    method: 'direct_url_ready',
     directWhatsAppUrl,
     reportText,
-    method: 'direct_url_ready'
+    error: 'Automated WhatsApp Cloud API provider credentials pending configuration. Direct store link generated.'
   };
 }

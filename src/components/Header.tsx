@@ -10,7 +10,6 @@ interface HeaderProps {
   cartCount: number;
   onOpenCart: () => void;
   onOpenAdmin: () => void;
-  onOpenAudit?: () => void;
   onSelectProduct: (product: Product) => void;
   products: Product[];
   merchantWhatsApp: string;
@@ -24,7 +23,6 @@ export const Header: React.FC<HeaderProps> = ({
   cartCount,
   onOpenCart,
   onOpenAdmin,
-  onOpenAudit,
   onSelectProduct,
   products,
   merchantWhatsApp

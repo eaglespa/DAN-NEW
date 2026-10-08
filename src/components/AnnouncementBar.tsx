@@ -6,14 +6,12 @@ interface AnnouncementBarProps {
   settings: StoreSettings;
   currency: string;
   onCurrencyChange: (c: string) => void;
-  onOpenAudit?: () => void;
 }
 
 export const AnnouncementBar: React.FC<AnnouncementBarProps> = ({
   settings,
   currency,
-  onCurrencyChange,
-  onOpenAudit
+  onCurrencyChange
 }) => {
   const [timeLeft, setTimeLeft] = useState({ hours: 4, minutes: 28, seconds: 45 });
 
@@ -48,8 +46,6 @@ export const AnnouncementBar: React.FC<AnnouncementBarProps> = ({
             <span className="text-slate-500">:</span>
             <span>{format(timeLeft.seconds)}</span>
           </div>
-
-          <span className="hidden md:inline text-slate-600">|</span>
 
           <span className="text-slate-300 font-medium text-xs truncate">
             {settings.announcementText}

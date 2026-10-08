@@ -25,7 +25,6 @@ import { ShippingLabelView } from './components/ShippingLabelView';
 import { TrustHeroBar } from './components/TrustHeroBar';
 import { FrequentlyBoughtTogether } from './components/FrequentlyBoughtTogether';
 import { AbandonedCartRecoveryModal } from './components/AbandonedCartRecoveryModal';
-import { StoreAuditModal } from './components/StoreAuditModal';
 import { Product, CartItem, Order, StoreSettings } from './types';
 import { INITIAL_PRODUCTS, INITIAL_SETTINGS } from './data/initialProducts';
 import { AlertCircle, CheckCircle2, ChevronRight, Home } from 'lucide-react';
@@ -60,7 +59,6 @@ export default function App() {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [legalPolicyType, setLegalPolicyType] = useState<LegalPolicyType>(null);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
-  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
   const [isAbandonedModalOpen, setIsAbandonedModalOpen] = useState(false);
   const [hasShownAbandonedModal, setHasShownAbandonedModal] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; percent: number } | null>(null);
@@ -178,8 +176,6 @@ export default function App() {
         setLegalPolicyType('privacy');
       } else if (hash === '#cookie' || hash === '#cookie-policy' || hash === '#cookies') {
         setLegalPolicyType('cookie');
-      } else if (hash === '#audit' || hash === '#store-audit') {
-        setIsAuditModalOpen(true);
       }
     };
 
@@ -1111,7 +1107,6 @@ ${itemsText}
         onUpdateSettings={handleUpdateSettings}
         onRefreshData={refreshData}
         currencySymbol={settings.currencySymbol || '£'}
-        onOpenAudit={() => setIsAuditModalOpen(true)}
         onOpenLabel={(ord) => {
           setIsAdminOpen(false);
           setSelectedLabelOrder(ord);
@@ -1127,7 +1122,7 @@ ${itemsText}
         onSuccess={handleAdminPasswordSuccess}
       />
 
-      {/* Abandoned Cart Recovery Modal (Audit Fix: Issue #2) */}
+      {/* Abandoned Cart Recovery Modal */}
       <AbandonedCartRecoveryModal
         isOpen={isAbandonedModalOpen}
         onClose={() => setIsAbandonedModalOpen(false)}
@@ -1141,27 +1136,6 @@ ${itemsText}
         onProceedToCheckout={() => {
           setIsAbandonedModalOpen(false);
           setIsPayPalCheckoutOpen(true);
-        }}
-      />
-
-      {/* Store Audit Resolution Report Modal (Audit Score 43 -> 98 / 100) */}
-      <StoreAuditModal
-        isOpen={isAuditModalOpen}
-        onClose={() => setIsAuditModalOpen(false)}
-        onOpenAbandonedCartDemo={() => {
-          setIsAuditModalOpen(false);
-          if (cart.length === 0 && activeProducts.length > 0) {
-            handleAddToCartFromCard(activeProducts[0]);
-          }
-          setTimeout(() => setIsAbandonedModalOpen(true), 350);
-        }}
-        onOpenTrustModal={() => {
-          setIsAuditModalOpen(false);
-          setActivePage('detail');
-        }}
-        onTriggerBundleDemo={() => {
-          setIsAuditModalOpen(false);
-          setActivePage('detail');
         }}
       />
 

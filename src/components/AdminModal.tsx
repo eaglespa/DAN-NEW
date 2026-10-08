@@ -15,7 +15,6 @@ interface AdminModalProps {
   onRefreshData: () => Promise<void>;
   currencySymbol: string;
   onOpenLabel?: (order: Order) => void;
-  onOpenAudit?: () => void;
 }
 
 export const AdminModal: React.FC<AdminModalProps> = ({
@@ -30,8 +29,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   onUpdateSettings,
   onRefreshData,
   currencySymbol,
-  onOpenLabel,
-  onOpenAudit
+  onOpenLabel
 }) => {
   const [activeTab, setActiveTab] = useState<'inventory' | 'orders' | 'settings'>('inventory');
   const [isEditing, setIsEditing] = useState(false);
@@ -203,17 +201,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {onOpenAudit && (
-              <button
-                type="button"
-                onClick={onOpenAudit}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-black border border-emerald-500/50 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs"
-                title="View Store Audit Score (43 -> 98/100)"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Audit: 98/100 (Grade A+)</span>
-              </button>
-            )}
             <a
               href="/api/download-zip"
               download="style-and-class-london-store.zip"

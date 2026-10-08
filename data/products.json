@@ -9,7 +9,7 @@
     "condition": "Excellent",
     "collection": "women",
     "category": "Maxi Dress",
-    "price": 28,
+    "price": 4.98,
     "compareAtPrice": 89,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -25,8 +25,7 @@
     "colors": [
       {
         "name": "Vintage Botanical",
-        "hex": "#4b5563",
-        "imageIndex": 0
+        "hex": "#c59b27"
       }
     ],
     "tags": [
@@ -66,7 +65,7 @@
     "condition": "New Without Tags",
     "collection": "women",
     "category": "Knitwear",
-    "price": 32,
+    "price": 5,
     "compareAtPrice": 95,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -82,8 +81,7 @@
     "colors": [
       {
         "name": "Oatmeal Melange",
-        "hex": "#d8cca3",
-        "imageIndex": 0
+        "hex": "#c59b27"
       }
     ],
     "tags": [
@@ -122,7 +120,7 @@
     "condition": "Excellent",
     "collection": "men",
     "category": "Outerwear",
-    "price": 68,
+    "price": 5,
     "compareAtPrice": 95,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -138,8 +136,7 @@
     "colors": [
       {
         "name": "Classic Khaki Honey",
-        "hex": "#c2a67e",
-        "imageIndex": 0
+        "hex": "#c59b27"
       }
     ],
     "tags": [
@@ -234,7 +231,7 @@
     "condition": "Excellent",
     "collection": "men",
     "category": "Knitwear",
-    "price": 38,
+    "price": 5,
     "compareAtPrice": 110,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -250,8 +247,7 @@
     "colors": [
       {
         "name": "Forest Olive Heather",
-        "hex": "#3f4f3f",
-        "imageIndex": 0
+        "hex": "#c59b27"
       }
     ],
     "tags": [
@@ -290,7 +286,7 @@
     "condition": "Very Good",
     "collection": "men",
     "category": "Trousers",
-    "price": 32,
+    "price": 5,
     "compareAtPrice": 120,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -306,8 +302,7 @@
     "colors": [
       {
         "name": "Charcoal Heather",
-        "hex": "#334155",
-        "imageIndex": 0
+        "hex": "#c59b27"
       }
     ],
     "tags": [
@@ -346,7 +341,7 @@
     "condition": "Excellent",
     "collection": "men",
     "category": "Jackets",
-    "price": 85,
+    "price": 4.99,
     "compareAtPrice": 295,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -362,8 +357,7 @@
     "colors": [
       {
         "name": "Antique Brown Wax",
-        "hex": "#4a3525",
-        "imageIndex": 0
+        "hex": "#c59b27"
       }
     ],
     "tags": [
@@ -458,7 +452,7 @@
     "condition": "Excellent",
     "collection": "kids",
     "category": "Outerwear",
-    "price": 24,
+    "price": 5,
     "compareAtPrice": 70,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -474,8 +468,7 @@
     "colors": [
       {
         "name": "Classic Navy",
-        "hex": "#1e3a8a",
-        "imageIndex": 0
+        "hex": "#c59b27"
       }
     ],
     "tags": [
@@ -514,7 +507,7 @@
     "condition": "New Without Tags",
     "collection": "kids",
     "category": "Tops",
-    "price": 9.5,
+    "price": 5,
     "compareAtPrice": 25,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -530,8 +523,7 @@
     "colors": [
       {
         "name": "Navy & White Stripe",
-        "hex": "#1e293b",
-        "imageIndex": 0
+        "hex": "#f3f4f6"
       }
     ],
     "tags": [
@@ -570,7 +562,7 @@
     "condition": "Excellent",
     "collection": "kids",
     "category": "Dresses",
-    "price": 16,
+    "price": 5,
     "compareAtPrice": 42,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -586,8 +578,7 @@
     "colors": [
       {
         "name": "Rose Garden Print",
-        "hex": "#f472b6",
-        "imageIndex": 0
+        "hex": "#c59b27"
       }
     ],
     "tags": [
@@ -626,7 +617,7 @@
     "condition": "New Without Tags",
     "collection": "accessories",
     "category": "HAND BAG",
-    "price": 125,
+    "price": 4.97,
     "compareAtPrice": 135,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -642,8 +633,7 @@
     "colors": [
       {
         "name": "Forest Dark Green",
-        "hex": "#164e3f",
-        "imageIndex": 0
+        "hex": "#c59b27"
       }
     ],
     "tags": [
@@ -694,7 +684,7 @@
     "condition": "Excellent",
     "collection": "accessories",
     "category": "Scarves",
-    "price": 45,
+    "price": 5,
     "compareAtPrice": 180,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -710,8 +700,7 @@
     "colors": [
       {
         "name": "Classic Nova Check",
-        "hex": "#d8cca3",
-        "imageIndex": 0
+        "hex": "#c59b27"
       }
     ],
     "tags": [
@@ -750,7 +739,7 @@
     "condition": "Excellent",
     "collection": "accessories",
     "category": "Crossbody Bags",
-    "price": 52,
+    "price": 4.97,
     "compareAtPrice": 165,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -766,8 +755,7 @@
     "colors": [
       {
         "name": "Classic Black",
-        "hex": "#111827",
-        "imageIndex": 0
+        "hex": "#111111"
       }
     ],
     "tags": [
@@ -805,7 +793,7 @@
     "condition": "Very Good",
     "collection": "accessories",
     "category": "Belts",
-    "price": 36,
+    "price": 5,
     "compareAtPrice": 140,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -821,8 +809,7 @@
     "colors": [
       {
         "name": "Rich Cognac Tan",
-        "hex": "#78350f",
-        "imageIndex": 0
+        "hex": "#c59b27"
       }
     ],
     "tags": [

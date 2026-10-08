@@ -60,6 +60,17 @@ export interface CustomerDetails {
   notes?: string;
 }
 
+export type PaymentState =
+  | 'CREATED'
+  | 'PENDING'
+  | 'APPROVED'
+  | 'CAPTURE_PENDING'
+  | 'PAID'
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'REFUNDED'
+  | 'REVIEW_REQUIRED';
+
 export interface Order {
   id: string;
   createdAt: string;
@@ -77,6 +88,7 @@ export interface Order {
   customer: CustomerDetails;
   carrier?: 'evri' | 'inpost' | 'royalmail';
   carrierName?: string;
+  trackingNumber?: string;
   subtotal: number;
   shipping: number;
   discount: number;
@@ -84,7 +96,13 @@ export interface Order {
   currency: string;
   paymentMethod: 'paypal_uk' | 'whatsapp' | 'card' | 'card_uk';
   paymentStatus: 'completed' | 'pending' | 'failed';
+  paymentState?: PaymentState;
+  paypalOrderId?: string;
+  paypalCaptureId?: string;
   whatsappNotified: boolean;
+  whatsappStatus?: 'pending' | 'sent' | 'failed';
+  whatsappAttemptCount?: number;
+  whatsappLastError?: string;
   addressQrDataUrl?: string;
   addressQrUrl?: string;
   addressBarcode?: string;

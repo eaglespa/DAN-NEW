@@ -4,7 +4,6 @@ import { StoreSettings } from '../types';
 
 interface FooterProps {
   onOpenAdmin?: () => void;
-  onOpenAudit?: () => void;
   settings: StoreSettings;
   onNavigate: (page: 'home' | 'collections' | 'contact', category?: string) => void;
   onOpenLegal: (policy: 'terms' | 'privacy' | 'cookie') => void;
@@ -12,7 +11,6 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({
   onOpenAdmin,
-  onOpenAudit,
   settings,
   onNavigate,
   onOpenLegal
