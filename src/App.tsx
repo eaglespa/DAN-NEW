@@ -93,20 +93,10 @@ export default function App() {
           try {
             const prodData: Product[] = JSON.parse(text);
             if (Array.isArray(prodData)) {
-              // Intersect with locally cached sold IDs to guarantee immediate sold status
-              const localSold: string[] = JSON.parse(localStorage.getItem('styleandclass_sold_ids') || '[]');
-              const localSoldSet = new Set(localSold);
-              const updatedProds = prodData.map(p => {
-                if (localSoldSet.has(p.id) || p.status === 'sold' || p.stock <= 0) {
-                  return { ...p, status: 'sold' as const, stock: 0 };
-                }
-                return p;
-              });
-
-              setProducts(updatedProds);
+              setProducts(prodData);
               setCurrentProduct((prev) => {
-                const match = updatedProds.find((p) => p.id === prev.id);
-                return match || updatedProds[0] || { ...prev, stock: 0, status: 'sold' };
+                const match = prodData.find((p) => p.id === prev.id);
+                return match || prodData.find(p => p.status === 'active' && p.stock > 0) || prodData[0] || prev;
               });
             }
           } catch (jsonErr) {
@@ -377,237 +367,74 @@ export default function App() {
     setIsPayPalCheckoutOpen(true);
   };
 
-  // Direct WhatsApp Order Button on Product Page (supports currentProduct or specific product)
-  const handleOrderViaWhatsAppDirect = async (productToOrder?: Product) => {
+  // Direct WhatsApp Concierge Inquiry on Product Page (supports currentProduct or specific product)
+  const handleOrderViaWhatsAppDirect = (productToOrder?: Product) => {
     const targetProduct = productToOrder || currentProduct;
-    if (targetProduct.stock <= 0 || targetProduct.status === 'archived' || targetProduct.status === 'sold') {
-      alert('This 1-of-1 piece has already been purchased and removed from the store.');
-      return;
+    const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9]/g, '');
+    let normPhone = cleanPhone;
+    if (normPhone.startsWith('440')) {
+      normPhone = '44' + normPhone.slice(3);
+    } else if (normPhone.startsWith('07')) {
+      normPhone = '44' + normPhone.slice(1);
     }
+    if (!normPhone) normPhone = '447591878215';
 
-    const boughtId = targetProduct.id;
-    const boughtTitle = targetProduct.title;
-
-    // Persist immediately in localStorage
-    try {
-      const existing: string[] = JSON.parse(localStorage.getItem('styleandclass_sold_ids') || '[]');
-      localStorage.setItem('styleandclass_sold_ids', JSON.stringify(Array.from(new Set([...existing, boughtId]))));
-    } catch (e) {}
-
-    // Immediately mark as sold out with clear status: 'sold' and stock: 0
-    setProducts((prev) => prev.map((p) => p.id === boughtId ? { ...p, status: 'sold' as const, stock: 0 } : p));
-    setCurrentProduct((prev) => {
-      if (prev.id === boughtId) {
-        return { ...prev, stock: 0, status: 'sold' };
-      }
-      return prev;
-    });
-
-    setInventoryAlert(`✓ "${boughtTitle}" has been purchased & marked SOLD on the website!`);
-
-    try {
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          carrier: 'evri',
-          items: [
-            {
-              productId: targetProduct.id,
-              productTitle: targetProduct.title,
-              quantity: productToOrder ? 1 : quantity,
-              color: productToOrder ? (targetProduct.colors[0]?.name || 'Standard') : selectedColor,
-              size: productToOrder ? (targetProduct.sizes[0] || 'Standard') : selectedSize,
-              image: targetProduct.images[0] || ''
-            }
-          ],
-          customer: {
-            fullName: 'WhatsApp Customer',
-            phone: settings.merchantWhatsApp || '+447591878215',
-            address: 'Direct WhatsApp Customer UK',
-            city: 'London',
-            postcode: 'UK'
-          },
-          paymentMethod: 'whatsapp',
-          notes: 'Customer ordered directly via WhatsApp button'
-        })
-      });
-
-      const data = await response.json();
-      const whatsappUrl = data?.whatsappUrl;
-      const order = data?.order;
-
-      if (whatsappUrl) {
-        window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-      } else {
-        const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9]/g, '');
-        const normPhone = cleanPhone.startsWith('440') ? '44' + cleanPhone.slice(3) : cleanPhone.startsWith('07') ? '44' + cleanPhone.slice(1) : (cleanPhone || '447591878215');
-        const message = 
-`👑 *STYLE & CLASS LONDON* 👑
+    const message = 
+`👑 *STYLE & CLASS LONDON - VIP CONCIERGE INQUIRY*
 _Curated Pre-Loved Luxury Fashion · London, United Kingdom_
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚜️ *NEW ORDER PURCHASE REQUEST* ⚜️
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Hello! I would like to inquire about this 1-of-1 piece:
 
-📦 *5. ITEM DETAILS*
-• *Name:* ${targetProduct.title} [${targetProduct.code || targetProduct.sku || '1-of-1'}]
+📦 *ITEM INQUIRY:*
+• *Product:* ${targetProduct.title} [${targetProduct.code || targetProduct.sku || '1-of-1'}]
 • *Brand:* ${targetProduct.brand || 'Designer'}
 • *Price:* £${targetProduct.price.toFixed(2)} GBP
-• *Size:* ${targetProduct.sizes[0] || 'Standard'}
-• *Condition:* Pre-Loved / Excellent 1-of-1 Piece
+• *Size:* ${selectedSize || targetProduct.sizes[0] || 'Standard'}
+• *Condition:* Pre-Loved / Excellent (Unique 1-of-1 Piece)
 📸 *Photo:*
 ${targetProduct.images[0] || ''}
 
-👤 *BUYER DETAILS TO COMPLETE DISPATCH:*
-1. Buyer Full Name:
-2. Buyer Street Address & Postcode:
-3. Buyer Phone Number:
-4. Preferred Courier (Evri £2.60 / InPost £2.89 / Royal Mail £3.65):
-
+Please assist me with sizing advice, fit details, or priority courier dispatch!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🇬🇧 *Style & Class London · styleandclass.store*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-        window.open(`https://api.whatsapp.com/send?phone=${normPhone}&text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
-      }
+🇬🇧 *Style & Class London · styleandclass.store*`;
 
-      if (order) {
-        setSuccessOrderData({
-          order,
-          whatsappUrl: whatsappUrl || '',
-          removedProducts: [boughtTitle]
-        });
-      }
-    } catch (e) {
-      console.warn('Backend order recording error:', e);
-      const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9]/g, '');
-      const normPhone = cleanPhone.startsWith('440') ? '44' + cleanPhone.slice(3) : cleanPhone.startsWith('07') ? '44' + cleanPhone.slice(1) : (cleanPhone || '447591878215');
-      const message = 
-`👑 *STYLE & CLASS LONDON* 👑
-_Curated Pre-Loved Luxury Fashion · London, United Kingdom_
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚜️ *NEW ORDER PURCHASE REQUEST* ⚜️
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📦 *5. ITEM DETAILS*
-• *Name:* ${targetProduct.title} [${targetProduct.code || targetProduct.sku || '1-of-1'}]
-• *Brand:* ${targetProduct.brand || 'Designer'}
-• *Price:* £${targetProduct.price.toFixed(2)} GBP
-• *Size:* ${targetProduct.sizes[0] || 'Standard'}
-📸 *Photo:*
-${targetProduct.images[0] || ''}
-
-👤 *BUYER DETAILS TO COMPLETE DISPATCH:*
-1. Buyer Full Name:
-2. Buyer Street Address & Postcode:
-3. Buyer Phone Number:
-4. Preferred Courier (Evri £2.60 / InPost £2.89 / Royal Mail £3.65):
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🇬🇧 *Style & Class London · styleandclass.store*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-      window.open(`https://api.whatsapp.com/send?phone=${normPhone}&text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
-    }
+    window.open(`https://api.whatsapp.com/send?phone=${normPhone}&text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
   };
 
-  // WhatsApp Order from Cart Drawer
-  const handleCheckoutWhatsAppFromCart = async () => {
+  // WhatsApp Bag Inquiry from Cart Drawer
+  const handleCheckoutWhatsAppFromCart = () => {
     if (cart.length === 0) return;
 
-    const boughtIds = new Set(cart.map((it) => it.product.id));
-    const boughtTitles = cart.map((it) => it.product.title);
-    const cartItems = [...cart];
+    const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9]/g, '');
+    let normPhone = cleanPhone;
+    if (normPhone.startsWith('440')) {
+      normPhone = '44' + normPhone.slice(3);
+    } else if (normPhone.startsWith('07')) {
+      normPhone = '44' + normPhone.slice(1);
+    }
+    if (!normPhone) normPhone = '447591878215';
 
-    // Persist immediately in localStorage
-    try {
-      const existing: string[] = JSON.parse(localStorage.getItem('styleandclass_sold_ids') || '[]');
-      localStorage.setItem('styleandclass_sold_ids', JSON.stringify(Array.from(new Set([...existing, ...Array.from(boughtIds)]))));
-    } catch (e) {}
+    const itemsText = cart
+      .map((it, idx) => `• *Item ${idx + 1}:* ${it.product.title} [${it.product.code || it.product.sku || '1-of-1'}]\n  - Price: £${(it.product.price * it.quantity).toFixed(2)} GBP (Qty: ${it.quantity}, Size: ${it.selectedSize})\n📸 Photo: ${it.product.images[0] || ''}`)
+      .join('\n\n');
+    const rawTotal = cart.reduce((a, b) => a + b.product.price * b.quantity, 0);
 
-    // Immediately remove bought items from website products state and empty cart
-    setProducts((prev) => prev.filter((p) => !boughtIds.has(p.id)));
-    setCurrentProduct((prev) => {
-      if (boughtIds.has(prev.id)) {
-        return { ...prev, stock: 0, status: 'archived' };
-      }
-      return prev;
-    });
-    setCart([]);
-    setIsCartOpen(false);
-
-    setInventoryAlert(`✓ "${boughtTitles.join(', ')}" purchased & permanently removed from the website!`);
-
-    try {
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          carrier: 'evri',
-          items: cartItems.map((it) => ({
-            productId: it.product.id,
-            productTitle: it.product.title,
-            quantity: it.quantity,
-            color: it.selectedColor,
-            size: it.selectedSize,
-            image: it.product.images[0] || ''
-          })),
-          customer: {
-            fullName: 'WhatsApp Customer',
-            phone: settings.merchantWhatsApp || '+447591878215',
-            address: 'Direct WhatsApp Customer UK',
-            city: 'London',
-            postcode: 'UK'
-          },
-          paymentMethod: 'whatsapp',
-          notes: 'Customer placed order directly via WhatsApp bag'
-        })
-      });
-
-      const data = await response.json();
-      const whatsappUrl = data?.whatsappUrl;
-      const order = data?.order;
-
-      if (whatsappUrl) {
-        window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-      }
-
-      if (order) {
-        setSuccessOrderData({
-          order,
-          whatsappUrl: whatsappUrl || '',
-          removedProducts: boughtTitles
-        });
-      }
-    } catch (e) {
-      console.warn('Backend order recording error from cart:', e);
-      const cleanPhone = (settings.merchantWhatsApp || '+447591878215').replace(/[^0-9]/g, '');
-      const normPhone = cleanPhone.startsWith('440') ? '44' + cleanPhone.slice(3) : cleanPhone.startsWith('07') ? '44' + cleanPhone.slice(1) : (cleanPhone || '447591878215');
-      const itemsText = cartItems
-        .map((it, idx) => `• *Item ${idx + 1}:* ${it.product.title} [${it.product.code || it.product.sku || '1-of-1'}]\n  - *Price:* £${(it.product.price * it.quantity).toFixed(2)} GBP (Qty: ${it.quantity}, Size: ${it.selectedSize})\n📸 *Photo:* ${it.product.images[0] || ''}`)
-        .join('\n\n');
-      const subtotal = cartItems.reduce((a, b) => a + b.product.price * b.quantity, 0);
-      const message = 
-`👑 *STYLE & CLASS LONDON* 👑
+    const message = 
+`👑 *STYLE & CLASS LONDON - SHOPPING BAG CONCIERGE*
 _Curated Pre-Loved Luxury Fashion · London, United Kingdom_
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚜️ *BAG CHECKOUT PURCHASE REQUEST* ⚜️
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Hello! I have curated these 1-of-1 pieces in my bag and would like styling or checkout assistance:
 
-📦 *5. ITEMS DETAILS:*
+📦 *BAG ITEMS:*
 ${itemsText}
 
-💰 *TOTAL BAG VALUE:* £${subtotal.toFixed(2)} GBP
+💰 *TOTAL BAG VALUE:* £${rawTotal.toFixed(2)} GBP
 
-👤 *BUYER DETAILS TO COMPLETE DISPATCH:*
-1. Buyer Full Name:
-2. Buyer Street Address & Postcode:
-3. Buyer Phone Number:
-4. Preferred Courier (Evri £2.60 / InPost £2.89 / Royal Mail £3.65):
-
+Please advise me before pieces sell out!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🇬🇧 *Style & Class London · styleandclass.store*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-      window.open(`https://api.whatsapp.com/send?phone=${normPhone}&text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
-    }
+🇬🇧 *Style & Class London · styleandclass.store*`;
+
+    window.open(`https://api.whatsapp.com/send?phone=${normPhone}&text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
   };
 
   // Order Completed - Permanently delete purchased items from website

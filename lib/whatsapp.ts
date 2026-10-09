@@ -136,10 +136,22 @@ export interface WhatsAppAlertResult {
  * Dispatches a formatted order message along with product photo to the store WhatsApp.
  * Accurately tracks whether an external API provider actually accepted the message.
  */
-export async function sendOrderAlertToWhatsApp(order: OrderNotificationPayload): Promise<WhatsAppAlertResult> {
-  const whatsappToken = process.env.WHATSAPP_ACCESS_TOKEN;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const recipientNumber = getStoreWhatsAppNumber();
+export async function sendOrderAlertToWhatsApp(
+  order: OrderNotificationPayload,
+  customSettings?: {
+    whatsappAccessToken?: string;
+    whatsappPhoneNumberId?: string;
+    whatsappWebhookUrl?: string;
+    callmebotApiKey?: string;
+    merchantWhatsApp?: string;
+  }
+): Promise<WhatsAppAlertResult> {
+  const whatsappToken = customSettings?.whatsappAccessToken || process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId = customSettings?.whatsappPhoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const webhookUrl = customSettings?.whatsappWebhookUrl || process.env.WHATSAPP_WEBHOOK_URL;
+  const recipientNumber = customSettings?.merchantWhatsApp
+    ? customSettings.merchantWhatsApp.replace(/\D/g, '')
+    : getStoreWhatsAppNumber();
   const reportText = buildDetailedOrderReport(order);
   const directWhatsAppUrl = generateWhatsAppChatUrl(order);
 
@@ -187,20 +199,43 @@ export async function sendOrderAlertToWhatsApp(order: OrderNotificationPayload):
     } catch (err: any) {
       const errorMsg = err?.response?.data?.error?.message || err?.message || 'Meta Cloud API error';
       console.error('[WhatsApp Provider] Meta Cloud API error:', errorMsg);
-      return {
-        success: false,
-        providerSent: false,
-        status: 'failed',
-        method: 'meta_cloud_api',
-        directWhatsAppUrl,
-        reportText,
-        error: errorMsg
-      };
+      // Fall through to other providers or direct link
+    }
+  }
+
+  // Check for Webhook integration (Zapier, Make, Slack, Discord, internal gateway)
+  if (webhookUrl && webhookUrl.startsWith('http')) {
+    try {
+      const whRes = await axios.post(
+        webhookUrl,
+        {
+          event: 'order.paid',
+          store: 'Style & Class London',
+          order,
+          recipientNumber,
+          reportText,
+          directWhatsAppUrl
+        },
+        { timeout: 8000 }
+      );
+      if (whRes.status >= 200 && whRes.status < 300) {
+        console.info(`[WhatsApp Webhook] Successfully delivered alert payload to ${webhookUrl}`);
+        return {
+          success: true,
+          providerSent: true,
+          status: 'sent',
+          method: 'meta_cloud_api',
+          directWhatsAppUrl,
+          reportText
+        };
+      }
+    } catch (whErr: any) {
+      console.warn('[WhatsApp Webhook] Webhook dispatch error:', whErr?.message);
     }
   }
 
   // Check for CallMeBot WhatsApp Gateway if key provided
-  const callmebotKey = process.env.CALLMEBOT_API_KEY;
+  const callmebotKey = customSettings?.callmebotApiKey || process.env.CALLMEBOT_API_KEY;
   if (callmebotKey) {
     try {
       const cmRes = await axios.get('https://api.callmebot.com/whatsapp.php', {

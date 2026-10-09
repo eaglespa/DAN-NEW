@@ -71,6 +71,18 @@ export type PaymentState =
   | 'REFUNDED'
   | 'REVIEW_REQUIRED';
 
+export interface PaymentAuditEntry {
+  timestamp: string;
+  state: PaymentState;
+  source: string;
+  note: string;
+  captureId?: string;
+  paypalOrderId?: string;
+  amount?: number;
+  currency?: string;
+  rawStatus?: string;
+}
+
 export interface Order {
   id: string;
   createdAt: string;
@@ -96,13 +108,19 @@ export interface Order {
   currency: string;
   paymentMethod: 'paypal_uk' | 'whatsapp' | 'card' | 'card_uk';
   paymentStatus: 'completed' | 'pending' | 'failed';
-  paymentState?: PaymentState;
+  paymentState: PaymentState;
+  paymentAuditTrail?: PaymentAuditEntry[];
   paypalOrderId?: string;
   paypalCaptureId?: string;
+  refundId?: string;
+  refundedAt?: string;
+  refundAmount?: number;
   whatsappNotified: boolean;
   whatsappStatus?: 'pending' | 'sent' | 'failed';
   whatsappAttemptCount?: number;
   whatsappLastError?: string;
+  whatsappMessageId?: string;
+  whatsappDispatchTimestamp?: string;
   addressQrDataUrl?: string;
   addressQrUrl?: string;
   addressBarcode?: string;
@@ -131,7 +149,12 @@ export interface StoreSettings {
   paypalClientId: string;
   paypalSecret?: string;
   paypalApiKey?: string;
+  paypalEnvironment?: 'live' | 'sandbox';
   paypalConnected?: boolean;
+  whatsappAccessToken?: string;
+  whatsappPhoneNumberId?: string;
+  whatsappWebhookUrl?: string;
+  callmebotApiKey?: string;
   currency: string;
   currencySymbol: string;
   freeShippingThreshold: number;

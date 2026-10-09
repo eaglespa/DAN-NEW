@@ -296,7 +296,7 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
             </button>
           </div>
 
-          {/* WhatsApp Direct Order Button */}
+          {/* WhatsApp Direct Concierge Inquiry Button */}
           <button
             id="product-whatsapp-order-btn"
             type="button"
@@ -305,7 +305,7 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
             className="w-full py-3.5 px-6 rounded-2xl bg-[#25D366] hover:bg-[#20ba5a] active:scale-98 text-black font-extrabold text-sm tracking-wide shadow-md transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer select-none"
           >
             <MessageCircle className="w-4 h-4 fill-black text-black" />
-            <span>Order via WhatsApp (+44 7591 878215)</span>
+            <span>Ask &amp; Inquire via WhatsApp (+44 7591 878215)</span>
           </button>
         </div>
       )}

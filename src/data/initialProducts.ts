@@ -9,8 +9,6 @@ export const INITIAL_SETTINGS: StoreSettings = {
   merchantPayPalEmail: "styleandclasslondon@gmail.com",
   location: "London, United Kingdom",
   paypalClientId: "BAAhhnSf00f00xNNYjsVnZoo0dVIAV76hZPo5AzXLCM1uJA5PU4IyrVb2vdeYVLTVgVbM-n_Gu7lNoWZow",
-  paypalSecret: "EJjVtXDiae-TR45sizEDYEJ5D0QE_AXawAmHP-FBFR-J4H_LZi6xVXRI2kIivZitOEIodr1jULqMi7Ud",
-  paypalApiKey: "BAAhhnSf00f00xNNYjsVnZoo0dVIAV76hZPo5AzXLCM1uJA5PU4IyrVb2vdeYVLTVgVbM-n_Gu7lNoWZow",
   paypalConnected: true,
   currency: "GBP",
   currencySymbol: "£",

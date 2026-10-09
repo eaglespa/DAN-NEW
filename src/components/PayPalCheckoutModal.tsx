@@ -80,6 +80,7 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
   // Track button rendering states
   const cardRenderedRef = useRef(false);
   const paypalRenderedRef = useRef(false);
+  const createdOrderIdRef = useRef<string | null>(null);
 
   const carrierRates: { [key: string]: { name: string; cost: number; time: string } } = {
     evri: { name: 'Evri Standard Tracked (£2.60)', cost: 2.60, time: '2–3 Working Days' },
@@ -250,6 +251,7 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
         throw new Error(data.error || 'Failed to create secure PayPal order session');
       }
 
+      createdOrderIdRef.current = data.orderId;
       setProcessingStatus('Awaiting payment authorization in secure window...');
 
       // Safety timeout in case popup is dismissed or closed by buyer
@@ -335,106 +337,135 @@ export const PayPalCheckoutModal: React.FC<PayPalCheckoutModalProps> = ({
   useEffect(() => {
     if (!isOpen || !sdkLoaded || !window.paypal) return;
 
-    // Render Card Button into cardContainerRef
-    if (cardContainerRef.current && !cardRenderedRef.current && cardContainerRef.current.children.length === 0) {
-      try {
-        window.paypal
-          .Buttons({
-            fundingSource: window.paypal.FUNDING.CARD,
-            style: {
-              layout: 'vertical',
-              color: 'black',
-              shape: 'rect',
-              label: 'pay',
-              height: 48
-            },
-            onClick: (data: any, actions: any) => {
-              if (!validateDeliveryDetails()) {
-                return actions.reject();
+    if (activePaymentTab === 'card') {
+      if (cardContainerRef.current && cardContainerRef.current.children.length === 0) {
+        try {
+          window.paypal
+            .Buttons({
+              fundingSource: window.paypal.FUNDING.CARD,
+              style: {
+                layout: 'vertical',
+                color: 'black',
+                shape: 'rect',
+                label: 'pay',
+                height: 48
+              },
+              onClick: (data: any, actions: any) => {
+                if (!validateDeliveryDetails()) {
+                  return actions.reject();
+                }
+                return actions.resolve();
+              },
+              createOrder: () => handleServerCreateOrder(),
+              onApprove: (data: any) => handleServerCaptureOrder(data.orderID, 'card_uk'),
+              onCancel: (data: any) => {
+                setIsProcessing(false);
+                setProcessingStatus('');
+                const cancelledId = data?.orderID || createdOrderIdRef.current;
+                if (cancelledId) {
+                  fetch('/api/paypal/cancel-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paypalOrderId: cancelledId, reason: 'Customer cancelled card checkout' })
+                  }).catch(() => {});
+                }
+              },
+              onError: (err: any) => {
+                console.error('PayPal Card Button Error:', err);
+                setIsProcessing(false);
+                setProcessingStatus('');
+                setErrorMessage('Card payment cancelled or authorization failed. Please try again or use PayPal.');
               }
-              return actions.resolve();
-            },
-            createOrder: () => handleServerCreateOrder(),
-            onApprove: (data: any) => handleServerCaptureOrder(data.orderID, 'card_uk'),
-            onCancel: () => {
-              setIsProcessing(false);
-              setProcessingStatus('');
-            },
-            onError: (err: any) => {
-              console.error('PayPal Card Button Error:', err);
-              setIsProcessing(false);
-              setProcessingStatus('');
-              setErrorMessage('Card payment cancelled or authorization failed. Please try again or use PayPal.');
-            }
-          })
-          .render(cardContainerRef.current)
-          .then(() => {
-            cardRenderedRef.current = true;
-          })
-          .catch((err: any) => {
-            console.warn('Could not render dedicated card button, rendering standard buttons:', err);
-            if (cardContainerRef.current && cardContainerRef.current.children.length === 0) {
-              window.paypal
-                .Buttons({
-                  style: { layout: 'vertical', color: 'black', shape: 'rect', height: 48 },
-                  onClick: (data: any, actions: any) => {
-                    if (!validateDeliveryDetails()) return actions.reject();
-                    return actions.resolve();
-                  },
-                  createOrder: () => handleServerCreateOrder(),
-                  onApprove: (data: any) => handleServerCaptureOrder(data.orderID, 'card_uk'),
-                  onError: () => setIsProcessing(false)
-                })
-                .render(cardContainerRef.current);
+            })
+            .render(cardContainerRef.current)
+            .then(() => {
               cardRenderedRef.current = true;
-            }
-          });
-      } catch (err) {
-        console.warn('Error setting up Card buttons:', err);
-      }
-    }
-
-    // Render PayPal Button into paypalContainerRef
-    if (paypalContainerRef.current && !paypalRenderedRef.current && paypalContainerRef.current.children.length === 0) {
-      try {
-        window.paypal
-          .Buttons({
-            fundingSource: window.paypal.FUNDING.PAYPAL,
-            style: {
-              layout: 'vertical',
-              color: 'gold',
-              shape: 'rect',
-              label: 'paypal',
-              height: 48
-            },
-            onClick: (data: any, actions: any) => {
-              if (!validateDeliveryDetails()) {
-                return actions.reject();
+            })
+            .catch((err: any) => {
+              console.warn('Could not render dedicated card button, rendering standard buttons:', err);
+              if (cardContainerRef.current) {
+                cardContainerRef.current.innerHTML = '';
+                window.paypal
+                  .Buttons({
+                    style: { layout: 'vertical', color: 'black', shape: 'rect', height: 48 },
+                    onClick: (data: any, actions: any) => {
+                      if (!validateDeliveryDetails()) return actions.reject();
+                      return actions.resolve();
+                    },
+                    createOrder: () => handleServerCreateOrder(),
+                    onApprove: (data: any) => handleServerCaptureOrder(data.orderID, 'card_uk'),
+                    onCancel: (data: any) => {
+                      setIsProcessing(false);
+                      setProcessingStatus('');
+                      const cancelledId = data?.orderID || createdOrderIdRef.current;
+                      if (cancelledId) {
+                        fetch('/api/paypal/cancel-order', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ paypalOrderId: cancelledId, reason: 'Customer cancelled checkout' })
+                        }).catch(() => {});
+                      }
+                    },
+                    onError: () => setIsProcessing(false)
+                  })
+                  .render(cardContainerRef.current)
+                  .then(() => { cardRenderedRef.current = true; });
               }
-              return actions.resolve();
-            },
-            createOrder: () => handleServerCreateOrder(),
-            onApprove: (data: any) => handleServerCaptureOrder(data.orderID, 'paypal_uk'),
-            onCancel: () => {
-              setIsProcessing(false);
-              setProcessingStatus('');
-            },
-            onError: (err: any) => {
-              console.error('PayPal Button Error:', err);
-              setIsProcessing(false);
-              setProcessingStatus('');
-              setErrorMessage('PayPal transaction was cancelled or encountered an error. Please try again.');
-            }
-          })
-          .render(paypalContainerRef.current)
-          .then(() => {
-            paypalRenderedRef.current = true;
-          })
-          .catch((err: any) => {
-            console.warn('Error rendering PayPal button:', err);
-          });
-      } catch (err) {
-        console.warn('Error setting up PayPal buttons:', err);
+            });
+        } catch (err) {
+          console.warn('Error setting up Card buttons:', err);
+        }
+      }
+    } else if (activePaymentTab === 'paypal') {
+      if (paypalContainerRef.current && paypalContainerRef.current.children.length === 0) {
+        try {
+          window.paypal
+            .Buttons({
+              fundingSource: window.paypal.FUNDING.PAYPAL,
+              style: {
+                layout: 'vertical',
+                color: 'gold',
+                shape: 'rect',
+                label: 'paypal',
+                height: 48
+              },
+              onClick: (data: any, actions: any) => {
+                if (!validateDeliveryDetails()) {
+                  return actions.reject();
+                }
+                return actions.resolve();
+              },
+              createOrder: () => handleServerCreateOrder(),
+              onApprove: (data: any) => handleServerCaptureOrder(data.orderID, 'paypal_uk'),
+              onCancel: (data: any) => {
+                setIsProcessing(false);
+                setProcessingStatus('');
+                const cancelledId = data?.orderID || createdOrderIdRef.current;
+                if (cancelledId) {
+                  fetch('/api/paypal/cancel-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paypalOrderId: cancelledId, reason: 'Customer cancelled PayPal checkout' })
+                  }).catch(() => {});
+                }
+              },
+              onError: (err: any) => {
+                console.error('PayPal Button Error:', err);
+                setIsProcessing(false);
+                setProcessingStatus('');
+                setErrorMessage('PayPal transaction was cancelled or encountered an error. Please try again.');
+              }
+            })
+            .render(paypalContainerRef.current)
+            .then(() => {
+              paypalRenderedRef.current = true;
+            })
+            .catch((err: any) => {
+              console.warn('Error rendering PayPal button:', err);
+            });
+        } catch (err) {
+          console.warn('Error setting up PayPal buttons:', err);
+        }
       }
     }
   }, [isOpen, sdkLoaded, activePaymentTab]);

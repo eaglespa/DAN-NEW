@@ -4,9 +4,9 @@ import path from "path";
 import fs from "fs";
 import QRCode from "qrcode";
 import { INITIAL_PRODUCTS, INITIAL_SETTINGS, INITIAL_REVIEWS } from "./src/data/initialProducts.js";
-import { Product, Order, StoreSettings, CustomerReview } from "./src/types.js";
+import { Product, Order, StoreSettings, CustomerReview, PaymentAuditEntry } from "./src/types.js";
 import { generateAddressBarcode, bufferToDataUri } from "./lib/barcode.js";
-import { sendOrderAlertToWhatsApp } from "./lib/whatsapp.js";
+import { sendOrderAlertToWhatsApp, buildDetailedOrderReport, generateWhatsAppChatUrl } from "./lib/whatsapp.js";
 import { getStoreWhatsAppNumber, STORE_CONFIG } from "./lib/config.js";
 
 const app = express();
@@ -118,14 +118,6 @@ INITIAL_PRODUCTS.forEach(ip => {
   }
 });
 
-// Explicitly mark any sold products as sold with 0 stock
-products.forEach((p) => {
-  if (soldProductIds.has(p.id)) {
-    p.status = 'sold';
-    p.stock = 0;
-  }
-});
-
 try {
   if (fs.existsSync(ORDERS_FILE)) {
     orders = JSON.parse(fs.readFileSync(ORDERS_FILE, "utf-8"));
@@ -136,6 +128,28 @@ try {
 } catch (e) {
   orders = [];
 }
+
+// Reconcile sold products: only orders verified as PAID with a real PayPal capture ID reduce inventory
+const verifiedSoldIds = new Set<string>();
+orders.forEach(o => {
+  if (o.paymentState === 'PAID' && o.paypalCaptureId && o.paypalCaptureId !== 'VERIFIED') {
+    o.items?.forEach(it => verifiedSoldIds.add(it.productId));
+  }
+});
+soldProductIds = verifiedSoldIds;
+persistSoldProducts();
+
+// Explicitly mark verified sold products as sold with 0 stock, and unsold pieces as active
+products.forEach((p) => {
+  if (soldProductIds.has(p.id)) {
+    p.status = 'sold';
+    p.stock = 0;
+  } else if (p.status === 'sold' && !soldProductIds.has(p.id)) {
+    p.status = 'active';
+    p.stock = 1;
+  }
+});
+persistProducts();
 
 try {
   if (fs.existsSync(SETTINGS_FILE)) {
@@ -538,6 +552,16 @@ app.post("/api/orders", async (req, res) => {
       paymentMethod: normalizedPaymentMethod,
       paymentStatus: "pending",
       paymentState: "CREATED",
+      paymentAuditTrail: [
+        {
+          timestamp: new Date().toISOString(),
+          state: "CREATED",
+          source: "unverified_order_api",
+          note: "Unpaid order session recorded via /api/orders",
+          amount: total,
+          currency: "GBP"
+        }
+      ],
       whatsappNotified: false,
       whatsappStatus: "pending",
       addressQrDataUrl,
@@ -634,13 +658,16 @@ app.post("/api/orders", async (req, res) => {
       total: order.total
     };
 
-    const waResult = await sendOrderAlertToWhatsApp(waPayload);
-    const whatsappUrl = waResult.directWhatsAppUrl;
-    const whatsappMessage = waResult.reportText;
+    // GOLDEN RULE: Never send automated paid order alert for unverified/unpaid orders.
+    // Only /api/paypal/capture-order triggers the official automated merchant sale notification.
+    const whatsappUrl = generateWhatsAppChatUrl(waPayload);
+    const whatsappMessage = buildDetailedOrderReport(waPayload);
 
     order.barcodeUrl = barcodeUrl;
     order.whatsappUrl = whatsappUrl;
     order.whatsappReportText = whatsappMessage;
+    order.whatsappNotified = false;
+    order.whatsappStatus = "pending";
 
     res.status(201).json({
       success: true,
@@ -1109,9 +1136,64 @@ app.post(["/api/paypal/create-order", "/api/checkout/paypal/create-order"], asyn
 
     console.info(`[PayPal Order Created]: ${orderData.id} - Status: ${orderData.status}`);
 
+    const localOrderId = `SAC-${Math.floor(100000 + Math.random() * 900000)}`;
+    const pendingOrder: Order = {
+      id: localOrderId,
+      createdAt: new Date().toISOString(),
+      items: orderItemsParam.map((it: any) => {
+        const prod = products.find(p => p.id === (it.id || it.product?.id || it.productId)) || INITIAL_PRODUCTS.find(p => p.id === (it.id || it.product?.id || it.productId));
+        return {
+          productId: prod?.id || it.id || '1-of-1',
+          productTitle: prod?.title || it.title || 'Curated Piece',
+          color: it.selectedColor || it.color || 'Standard',
+          size: it.selectedSize || it.size || prod?.sizes?.[0] || 'Standard',
+          quantity: Number(it.quantity) || 1,
+          price: Number(prod?.price) || 0,
+          image: prod?.images?.[0] || '',
+          code: prod?.code || '',
+          brand: prod?.brand || ''
+        };
+      }),
+      customer: {
+        fullName: customer?.fullName || 'UK Customer',
+        phone: customer?.phone || '',
+        address: customer?.address || '',
+        city: customer?.city || 'London',
+        postcode: customer?.postcode || ''
+      },
+      carrier: chosenCarrierKey as any,
+      carrierName: chosenCarrierKey === 'royalmail' ? 'Royal Mail 48 Tracked' : chosenCarrierKey === 'inpost' ? 'InPost 24/7 Locker' : 'Evri Standard Delivery',
+      subtotal: Number(calculatedSubtotal.toFixed(2)),
+      shipping: Number(shippingCost.toFixed(2)),
+      discount: Number(discountAmount.toFixed(2)),
+      total: Number(calculatedTotal.toFixed(2)),
+      currency: "GBP",
+      paymentMethod: "paypal_uk",
+      paymentStatus: "pending",
+      paymentState: "CREATED",
+      paypalOrderId: orderData.id,
+      whatsappNotified: false,
+      whatsappStatus: "pending",
+      paymentAuditTrail: [
+        {
+          timestamp: new Date().toISOString(),
+          state: "CREATED",
+          source: "paypal_create_order",
+          note: `PayPal order session initiated (${orderData.id})`,
+          paypalOrderId: orderData.id,
+          amount: calculatedTotal,
+          currency: "GBP",
+          rawStatus: orderData.status
+        }
+      ]
+    };
+    orders.unshift(pendingOrder);
+    persistOrders();
+
     return res.json({
       success: true,
       orderId: orderData.id,
+      localOrderId,
       calculatedTotal: calculatedTotal.toFixed(2),
       subtotal: calculatedSubtotal.toFixed(2),
       discount: discountAmount.toFixed(2),
@@ -1123,29 +1205,42 @@ app.post(["/api/paypal/create-order", "/api/checkout/paypal/create-order"], asyn
   }
 });
 
+// Concurrency lock for in-flight capture operations to prevent race conditions
+const inFlightCaptures = new Map<string, Promise<any>>();
+
 // Server-side PayPal Order Capture with verified fund receipt, idempotency & instant stock deletion
 app.post(["/api/paypal/capture-order", "/api/checkout/paypal/capture-order"], async (req, res) => {
-  try {
-    const { paypalOrderId, customer, carrier: carrierParam, items: orderItemsParam, paymentMethod } = req.body;
+  const { paypalOrderId, customer, carrier: carrierParam, items: orderItemsParam, paymentMethod } = req.body || {};
 
-    if (!paypalOrderId) {
-      return res.status(400).json({ success: false, error: "Missing paypalOrderId for capture" });
+  if (!paypalOrderId) {
+    return res.status(400).json({ success: false, error: "Missing paypalOrderId for capture" });
+  }
+
+  // 1. Idempotency Check: Prevent duplicate captures or double orders
+  const existingOrder = orders.find(o => o.paypalOrderId === paypalOrderId || o.paypalCaptureId === paypalOrderId);
+  if (existingOrder && (existingOrder.paymentState === 'PAID' || existingOrder.paymentStatus === 'completed')) {
+    console.info(`[PayPal Capture Idempotent Hit] Order ${existingOrder.id} already captured & finalized.`);
+    return res.json({
+      success: true,
+      order: existingOrder,
+      alreadyProcessed: true,
+      captureId: existingOrder.paypalCaptureId || paypalOrderId,
+      whatsappUrl: existingOrder.whatsappUrl || "",
+      barcodeUrl: existingOrder.barcodeUrl || ""
+    });
+  }
+
+  // Check if an in-flight capture is already processing this PayPal order ID
+  if (inFlightCaptures.has(paypalOrderId)) {
+    try {
+      const result = await inFlightCaptures.get(paypalOrderId);
+      return res.json(result);
+    } catch (e: any) {
+      return res.status(500).json({ success: false, error: e.message || "Concurrent capture error" });
     }
+  }
 
-    // 1. Idempotency Check: Prevent duplicate captures or double orders
-    const existingOrder = orders.find(o => o.paypalOrderId === paypalOrderId || o.paypalCaptureId === paypalOrderId);
-    if (existingOrder && existingOrder.paymentStatus === 'completed') {
-      console.info(`[PayPal Capture Idempotent Hit] Order ${existingOrder.id} already captured & finalized.`);
-      return res.json({
-        success: true,
-        order: existingOrder,
-        alreadyProcessed: true,
-        captureId: existingOrder.paypalCaptureId || paypalOrderId,
-        whatsappUrl: existingOrder.whatsappUrl || "",
-        barcodeUrl: existingOrder.barcodeUrl || ""
-      });
-    }
-
+  const capturePromise = (async () => {
     const accessToken = await getPayPalAccessToken();
     const baseUrl = getPayPalBaseUrl();
 
@@ -1165,11 +1260,24 @@ app.post(["/api/paypal/capture-order", "/api/checkout/paypal/capture-order"], as
 
     if (!captureRes.ok) {
       console.error("[PayPal Capture Failed]:", captureRes.status, captureData);
-      return res.status(captureRes.status).json({
-        success: false,
-        error: captureData.message || captureData.details?.[0]?.description || "PayPal payment capture failed",
-        details: captureData
-      });
+      
+      // Update existing order state to FAILED if session existed
+      if (existingOrder) {
+        existingOrder.paymentState = 'FAILED';
+        existingOrder.paymentStatus = 'failed';
+        if (!existingOrder.paymentAuditTrail) existingOrder.paymentAuditTrail = [];
+        existingOrder.paymentAuditTrail.push({
+          timestamp: new Date().toISOString(),
+          state: 'FAILED',
+          source: 'paypal_capture_api',
+          note: `Capture rejected: ${captureData.message || captureData.details?.[0]?.description || captureRes.status}`,
+          paypalOrderId,
+          rawStatus: String(captureRes.status)
+        });
+        persistOrders();
+      }
+
+      throw new Error(captureData.message || captureData.details?.[0]?.description || "PayPal payment capture failed");
     }
 
     // 2. Strict State Machine Verification: Confirm payment is completed
@@ -1179,11 +1287,12 @@ app.post(["/api/paypal/capture-order", "/api/checkout/paypal/capture-order"], as
 
     if (!isCompleted) {
       console.error(`[PayPal Payment Not Completed] Status: ${captureStatus}`);
-      return res.status(400).json({
-        success: false,
-        paymentState: 'CAPTURE_PENDING',
-        error: `Payment is not completed. Current status: ${captureStatus || 'UNKNOWN'}`
-      });
+      if (existingOrder) {
+        existingOrder.paymentState = 'FAILED';
+        existingOrder.paymentStatus = 'failed';
+        persistOrders();
+      }
+      throw new Error(`Payment is not completed. Current status: ${captureStatus || 'UNKNOWN'}`);
     }
 
     const captureId = captureDetail?.id || paypalOrderId;
@@ -1193,37 +1302,39 @@ app.post(["/api/paypal/capture-order", "/api/checkout/paypal/capture-order"], as
     // 3. Currency and Amount Protection
     if (currencyCaptured !== "GBP") {
       console.error(`[Payment Currency Mismatch]: Expected GBP, got ${currencyCaptured}`);
-      return res.status(400).json({
-        success: false,
-        paymentState: 'REVIEW_REQUIRED',
-        error: `Currency verification failed: Expected GBP, got ${currencyCaptured}`
-      });
+      throw new Error(`Currency verification failed: Expected GBP, got ${currencyCaptured}`);
+    }
+
+    if (amountCaptured <= 0) {
+      console.error("[Payment Amount Zero] Captured amount is zero or negative");
+      throw new Error("Captured payment amount is invalid (£0.00)");
     }
 
     // 4. Reconcile items from inventory
     const orderItems: any[] = [];
     const purchasedProductIds: string[] = [];
 
-    if (Array.isArray(orderItemsParam)) {
-      for (const item of orderItemsParam) {
-        const prod = products.find(p => p.id === (item.id || item.product?.id || item.productId));
-        if (prod) {
-          orderItems.push({
-            productId: prod.id,
-            productTitle: prod.title,
-            price: Number(prod.price) || 0,
-            quantity: Number(item.quantity) || 1,
-            images: prod.images,
-            image: prod.images[0] || '',
-            code: prod.code,
-            sku: prod.sku,
-            brand: prod.brand,
-            size: item.selectedSize || item.size || prod.sizes?.[0] || 'One Size',
-            color: item.selectedColor || item.color || prod.colors?.[0] || 'Original',
-            category: prod.category
-          });
-          purchasedProductIds.push(prod.id);
-        }
+    const sourceItems = existingOrder?.items?.length ? existingOrder.items : (Array.isArray(orderItemsParam) ? orderItemsParam : []);
+
+    for (const item of sourceItems) {
+      const targetId = (item as any).productId || (item as any).id || (item as any).product?.id;
+      let prod = products.find(p => p.id === targetId) || INITIAL_PRODUCTS.find(p => p.id === targetId);
+      if (prod) {
+        orderItems.push({
+          productId: prod.id,
+          productTitle: prod.title,
+          price: Number(prod.price) || 0,
+          quantity: Number((item as any).quantity) || 1,
+          images: prod.images,
+          image: prod.images[0] || '',
+          code: prod.code,
+          sku: prod.sku,
+          brand: prod.brand,
+          size: (item as any).selectedSize || (item as any).size || prod.sizes?.[0] || 'One Size',
+          color: (item as any).selectedColor || (item as any).color || prod.colors?.[0] || 'Original',
+          category: prod.category
+        });
+        purchasedProductIds.push(prod.id);
       }
     }
 
@@ -1231,22 +1342,13 @@ app.post(["/api/paypal/capture-order", "/api/checkout/paypal/capture-order"], as
     const orderSubtotal = orderItems.reduce((s, it) => s + it.price * it.quantity, 0);
     const expectedFreeShipping = orderSubtotal >= (Number(settings.freeShippingThreshold) || 45);
     const carrierRates: Record<string, number> = { evri: 2.60, inpost: 2.89, royalmail: 3.65 };
-    const rawCarrierId = (typeof carrierParam === 'string' ? carrierParam : carrierParam?.id || 'evri').toLowerCase();
+    const rawCarrierId = (typeof carrierParam === 'string' ? carrierParam : carrierParam?.id || existingOrder?.carrier || 'evri').toLowerCase();
     const carrierId: 'evri' | 'inpost' | 'royalmail' =
       rawCarrierId.includes('royal') ? 'royalmail' : rawCarrierId.includes('inpost') ? 'inpost' : 'evri';
     const carrierCost = expectedFreeShipping ? 0 : (carrierRates[carrierId] ?? 2.60);
 
-    // 5. Amount mismatch protection (allow tiny difference for rounding or voucher)
-    if (amountCaptured <= 0) {
-      console.error("[Payment Amount Zero] Captured amount is zero or negative");
-      return res.status(400).json({
-        success: false,
-        paymentState: 'REVIEW_REQUIRED',
-        error: "Captured payment amount is invalid (£0.00)"
-      });
-    }
-
-    // 6. CRITICAL REQUIREMENT: Instant 1-of-1 piece inventory archiving & stock reduction
+    // 5. CRITICAL REQUIREMENT: Instant 1-of-1 piece inventory archiving & stock reduction
+    // ONLY AFTER VERIFIED PAYMENT
     if (purchasedProductIds.length > 0) {
       purchasedProductIds.forEach(id => soldProductIds.add(id));
       persistSoldProducts();
@@ -1260,15 +1362,21 @@ app.post(["/api/paypal/capture-order", "/api/checkout/paypal/capture-order"], as
       console.info(`[Store Inventory] Permanently archived purchased 1-of-1 pieces: ${purchasedProductIds.join(', ')}`);
     }
 
-    const carrierName = carrierId === 'royalmail' ? 'Royal Mail 48 Tracked' : carrierId === 'inpost' ? 'InPost 24/7 Locker' : 'Evri Standard Tracked';
+    const carrierName = carrierId === 'royalmail' ? 'Royal Mail 48 Tracked' : carrierId === 'inpost' ? 'InPost 24/7 Locker' : 'Evri Standard Delivery';
     const trackingPrefix = carrierId === 'royalmail' ? 'GB-RM' : carrierId === 'inpost' ? 'INP' : 'EVR';
     const trackingNumber = `${trackingPrefix}-${Date.now().toString().slice(-8)}`;
     const orderTotal = amountCaptured > 0 ? amountCaptured : Number((orderSubtotal + carrierCost).toFixed(2));
 
-    // 7. Generate scannable barcode for the buyer's shipping address
+    // 6. Generate scannable barcode for the buyer's shipping address
     let barcodeDataUri = "";
+    const buyerName = customer?.fullName || existingOrder?.customer?.fullName || "UK Fashion Customer";
+    const buyerPhone = customer?.phone || existingOrder?.customer?.phone || "";
+    const buyerAddress = customer?.address || existingOrder?.customer?.address || "";
+    const buyerCity = customer?.city || existingOrder?.customer?.city || "London";
+    const buyerPostcode = customer?.postcode || existingOrder?.customer?.postcode || "";
+
     try {
-      const fullAddressText = `${customer?.fullName || 'Customer'}\n${customer?.address || ''}\n${customer?.city || ''}\n${customer?.postcode || ''}\nUK`;
+      const fullAddressText = `${buyerName}\n${buyerAddress}\n${buyerCity}\n${buyerPostcode}\nUK`;
       const barcodeBuffer = await generateAddressBarcode(fullAddressText);
       barcodeDataUri = bufferToDataUri(barcodeBuffer);
     } catch (bcErr) {
@@ -1278,112 +1386,390 @@ app.post(["/api/paypal/capture-order", "/api/checkout/paypal/capture-order"], as
     const host = req.get('host') || 'localhost:3000';
     const proto = req.secure || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
     const appBaseUrl = process.env.APP_URL || `${proto}://${host}`;
-    const orderId = `SAC-${Math.floor(100000 + Math.random() * 900000)}`;
+    const orderId = existingOrder?.id || `SAC-${Math.floor(100000 + Math.random() * 900000)}`;
     const barcodeUrl = `${appBaseUrl}/api/barcode/${orderId}`;
 
-    const newOrder: Order = {
-      id: orderId,
-      customer: {
-        fullName: customer?.fullName || "UK Fashion Customer",
-        phone: customer?.phone || "",
-        address: customer?.address || "",
-        city: customer?.city || "London",
-        postcode: customer?.postcode || ""
-      },
-      items: orderItems,
-      subtotal: Number(orderSubtotal.toFixed(2)),
-      shipping: Number(carrierCost.toFixed(2)),
-      discount: 0,
-      total: Number(orderTotal.toFixed(2)),
-      currency: "GBP",
-      paymentMethod: paymentMethod === 'card_uk' ? 'card_uk' : 'paypal_uk',
-      paymentStatus: 'completed',
-      paymentState: 'PAID',
-      whatsappNotified: false,
-      whatsappStatus: 'pending',
-      whatsappAttemptCount: 0,
-      carrier: carrierId,
-      carrierName,
-      trackingNumber,
+    const auditEntry: PaymentAuditEntry = {
+      timestamp: new Date().toISOString(),
+      state: 'PAID',
+      source: 'paypal_capture_api',
+      note: `Payment captured successfully via PayPal UK. Capture ID: ${captureId}`,
+      captureId,
       paypalOrderId,
-      paypalCaptureId: captureId,
-      addressBarcode: barcodeDataUri,
-      barcodeUrl,
-      createdAt: new Date().toISOString()
+      amount: amountCaptured,
+      currency: currencyCaptured,
+      rawStatus: captureStatus
     };
 
-    // 8. Dispatch Automated WhatsApp Alert to Store (Decoupled & Non-blocking)
+    let targetOrder: Order;
+    if (existingOrder) {
+      targetOrder = existingOrder;
+      targetOrder.paymentStatus = 'completed';
+      targetOrder.paymentState = 'PAID';
+      targetOrder.paypalCaptureId = captureId;
+      targetOrder.total = orderTotal;
+      targetOrder.subtotal = Number(orderSubtotal.toFixed(2));
+      targetOrder.shipping = Number(carrierCost.toFixed(2));
+      targetOrder.carrier = carrierId;
+      targetOrder.carrierName = carrierName;
+      targetOrder.trackingNumber = trackingNumber;
+      targetOrder.addressBarcode = barcodeDataUri;
+      targetOrder.barcodeUrl = barcodeUrl;
+      targetOrder.paymentMethod = paymentMethod === 'card_uk' ? 'card_uk' : 'paypal_uk';
+      if (!targetOrder.paymentAuditTrail) targetOrder.paymentAuditTrail = [];
+      targetOrder.paymentAuditTrail.push(auditEntry);
+    } else {
+      targetOrder = {
+        id: orderId,
+        customer: {
+          fullName: buyerName,
+          phone: buyerPhone,
+          address: buyerAddress,
+          city: buyerCity,
+          postcode: buyerPostcode
+        },
+        items: orderItems,
+        subtotal: Number(orderSubtotal.toFixed(2)),
+        shipping: Number(carrierCost.toFixed(2)),
+        discount: 0,
+        total: Number(orderTotal.toFixed(2)),
+        currency: "GBP",
+        paymentMethod: paymentMethod === 'card_uk' ? 'card_uk' : 'paypal_uk',
+        paymentStatus: 'completed',
+        paymentState: 'PAID',
+        paymentAuditTrail: [auditEntry],
+        whatsappNotified: false,
+        whatsappStatus: 'pending',
+        whatsappAttemptCount: 0,
+        carrier: carrierId,
+        carrierName,
+        trackingNumber,
+        paypalOrderId,
+        paypalCaptureId: captureId,
+        addressBarcode: barcodeDataUri,
+        barcodeUrl,
+        createdAt: new Date().toISOString()
+      };
+      orders.unshift(targetOrder);
+    }
+
+    // 7. Dispatch Automated WhatsApp Alert to Store (Decoupled & Non-blocking)
     let whatsappDirectUrl = "";
     let whatsappReportText = "";
 
     try {
-      const firstItem = orderItems[0] || {};
-      const itemTitleSummary = orderItems.map(i => `${i.productTitle} [${i.code || '1-of-1'}]`).join(', ');
-      const photoUrl = firstItem.image || (Array.isArray(firstItem.images) && firstItem.images[0]) || 'https://styleandclass.store/logo.png';
-      const paymentMethodLabel = paymentMethod === 'card_uk' ? 'Debit/Credit Card (PayPal UK)' : 'PayPal UK (Verified)';
+      if (!targetOrder.whatsappNotified) {
+        const firstItem = orderItems[0] || {};
+        const itemTitleSummary = orderItems.map(i => `${i.productTitle} [${i.code || '1-of-1'}]`).join(', ');
+        const photoUrl = firstItem.image || (Array.isArray(firstItem.images) && firstItem.images[0]) || 'https://styleandclass.store/logo.png';
+        const paymentMethodLabel = paymentMethod === 'card_uk' ? 'Debit/Credit Card (PayPal UK Gateway)' : 'PayPal UK (Verified Fund Capture)';
 
-      const waResult = await sendOrderAlertToWhatsApp({
-        orderId: newOrder.id,
-        itemName: itemTitleSummary || 'Style & Class Curated Fashion',
-        itemPrice: orderTotal,
-        itemCurrency: 'GBP',
-        itemPhotoUrl: photoUrl,
-        buyerName: newOrder.customer.fullName,
-        buyerPhone: newOrder.customer.phone || 'N/A',
-        buyerAddress: `${newOrder.customer.address}, ${newOrder.customer.city}, ${newOrder.customer.postcode}`,
-        paymentMethod: paymentMethodLabel,
-        shippingCompany: carrierName,
-        paypalCaptureId: captureId,
-        barcodeUrl,
-        barcodeBase64OrUrl: barcodeDataUri,
-        items: orderItems.map(it => ({
-          title: it.productTitle,
-          code: it.code,
-          price: it.price,
-          quantity: it.quantity,
-          photoUrl: it.image,
-          size: it.size
-        })),
-        subtotal: orderSubtotal,
-        shippingCost: newOrder.shipping,
-        total: orderTotal
-      });
+        const waResult = await sendOrderAlertToWhatsApp(
+          {
+            orderId: targetOrder.id,
+            itemName: itemTitleSummary || 'Style & Class Curated Fashion',
+            itemPrice: orderTotal,
+            itemCurrency: 'GBP',
+            itemPhotoUrl: photoUrl,
+            buyerName: targetOrder.customer.fullName,
+            buyerPhone: targetOrder.customer.phone || 'N/A',
+            buyerAddress: `${targetOrder.customer.address}, ${targetOrder.customer.city}, ${targetOrder.customer.postcode}`,
+            paymentMethod: paymentMethodLabel,
+            shippingCompany: carrierName,
+            paypalCaptureId: captureId,
+            barcodeUrl,
+            barcodeBase64OrUrl: barcodeDataUri,
+            items: orderItems.map(it => ({
+              title: it.productTitle,
+              code: it.code,
+              price: it.price,
+              quantity: it.quantity,
+              photoUrl: it.image,
+              size: it.size
+            })),
+            subtotal: orderSubtotal,
+            shippingCost: targetOrder.shipping,
+            total: orderTotal
+          },
+          settings
+        );
 
-      newOrder.whatsappAttemptCount = 1;
-      if (waResult.providerSent) {
-        newOrder.whatsappNotified = true;
-        newOrder.whatsappStatus = 'sent';
+        targetOrder.whatsappAttemptCount = (targetOrder.whatsappAttemptCount || 0) + 1;
+        if (waResult.providerSent) {
+          targetOrder.whatsappNotified = true;
+          targetOrder.whatsappStatus = 'sent';
+        } else {
+          targetOrder.whatsappStatus = 'pending';
+          targetOrder.whatsappLastError = waResult.error;
+        }
+        whatsappDirectUrl = waResult.directWhatsAppUrl;
+        whatsappReportText = waResult.reportText;
       } else {
-        newOrder.whatsappStatus = 'pending';
-        newOrder.whatsappLastError = waResult.error;
+        console.info(`[WhatsApp Idempotency] Alert already dispatched for order ${targetOrder.id}, skipping duplicate send.`);
+        whatsappDirectUrl = targetOrder.whatsappUrl || "";
+        whatsappReportText = targetOrder.whatsappReportText || "";
       }
-      whatsappDirectUrl = waResult.directWhatsAppUrl;
-      whatsappReportText = waResult.reportText;
     } catch (waErr: any) {
       console.warn("Automated WhatsApp alert exception (payment remains PAID):", waErr?.message);
-      newOrder.whatsappStatus = 'failed';
-      newOrder.whatsappLastError = waErr?.message;
+      targetOrder.whatsappStatus = 'failed';
+      targetOrder.whatsappLastError = waErr?.message;
     }
 
-    newOrder.whatsappUrl = whatsappDirectUrl;
-    newOrder.whatsappReportText = whatsappReportText;
+    targetOrder.whatsappUrl = whatsappDirectUrl;
+    targetOrder.whatsappReportText = whatsappReportText;
 
-    orders.unshift(newOrder);
     persistOrders();
 
-    console.info(`[Payment & Order Finalized] Order ${newOrder.id} verified PAID via PayPal. Capture ID: ${captureId}`);
+    console.info(`[Payment & Order Finalized] Order ${targetOrder.id} verified PAID via PayPal. Capture ID: ${captureId}`);
 
-    return res.json({
+    return {
       success: true,
-      order: newOrder,
+      order: targetOrder,
       captureId,
       whatsappUrl: whatsappDirectUrl,
       whatsappReportText,
       barcodeUrl
-    });
+    };
+  })();
+
+  inFlightCaptures.set(paypalOrderId, capturePromise);
+
+  try {
+    const finalResult = await capturePromise;
+    return res.json(finalResult);
   } catch (err: any) {
     console.error("Capture order exception:", err);
-    res.status(500).json({ success: false, error: err.message || "Failed to process payment capture" });
+    return res.status(500).json({ success: false, error: err.message || "Failed to process payment capture" });
+  } finally {
+    inFlightCaptures.delete(paypalOrderId);
+  }
+});
+
+// POST Cancel PayPal Order Session (State transition: CREATED/PENDING -> FAILED)
+app.post("/api/paypal/cancel-order", async (req, res) => {
+  try {
+    const { paypalOrderId, reason } = req.body || {};
+    if (!paypalOrderId) {
+      return res.status(400).json({ success: false, error: "Missing paypalOrderId" });
+    }
+
+    const order = orders.find(o => o.paypalOrderId === paypalOrderId);
+    if (!order) {
+      return res.status(404).json({ success: false, error: "Order not found" });
+    }
+
+    if (order.paymentState === 'PAID') {
+      return res.status(400).json({ success: false, error: "Cannot cancel an already PAID order. Use refund instead." });
+    }
+
+    // State transition: PENDING/CREATED -> FAILED
+    order.paymentState = 'FAILED';
+    order.paymentStatus = 'failed';
+    if (!order.paymentAuditTrail) order.paymentAuditTrail = [];
+    order.paymentAuditTrail.push({
+      timestamp: new Date().toISOString(),
+      state: 'FAILED',
+      source: 'paypal_cancel_api',
+      note: reason || 'Customer cancelled transaction before completion',
+      paypalOrderId
+    });
+
+    persistOrders();
+
+    return res.json({
+      success: true,
+      order,
+      message: "Order successfully cancelled and recorded in audit trail."
+    });
+  } catch (err: any) {
+    console.error("Cancel order exception:", err);
+    res.status(500).json({ success: false, error: err.message || "Failed to cancel order" });
+  }
+});
+
+// GET Authoritative Server-side Verification directly against PayPal REST API
+app.get("/api/paypal/verify-order/:orderId", async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    if (!orderId) {
+      return res.status(400).json({ success: false, error: "Missing orderId" });
+    }
+
+    const accessToken = await getPayPalAccessToken();
+    const baseUrl = getPayPalBaseUrl();
+
+    const verifyRes = await fetch(`${baseUrl}/v2/checkout/orders/${encodeURIComponent(orderId)}`, {
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    const verifyData = await verifyRes.json();
+    if (!verifyRes.ok) {
+      return res.status(verifyRes.status).json({
+        success: false,
+        error: verifyData.message || "Failed to fetch order from PayPal API",
+        details: verifyData
+      });
+    }
+
+    const localOrder = orders.find(o => o.paypalOrderId === orderId || o.paypalCaptureId === orderId);
+
+    return res.json({
+      success: true,
+      paypalOrder: verifyData,
+      localOrder: localOrder || null,
+      status: verifyData.status
+    });
+  } catch (err: any) {
+    console.error("Verify order exception:", err);
+    res.status(500).json({ success: false, error: err.message || "Verification request failed" });
+  }
+});
+
+// POST Refund Order via official PayPal Refund API (Admin / Automated)
+app.post("/api/paypal/refund-order", async (req, res) => {
+  try {
+    const { orderId, reason } = req.body || {};
+    if (!orderId) {
+      return res.status(400).json({ success: false, error: "Missing orderId" });
+    }
+
+    const order = orders.find(o => o.id === orderId || o.paypalOrderId === orderId || o.paypalCaptureId === orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, error: "Order not found" });
+    }
+
+    if (order.paymentState !== 'PAID' || !order.paypalCaptureId) {
+      return res.status(400).json({
+        success: false,
+        error: `Only verified PAID orders with a PayPal Capture ID can be refunded. Current state: ${order.paymentState}`
+      });
+    }
+
+    const accessToken = await getPayPalAccessToken();
+    const baseUrl = getPayPalBaseUrl();
+
+    console.info(`[PayPal Refund Request] Processing refund for Capture ID: ${order.paypalCaptureId}`);
+
+    const refundRes = await fetch(`${baseUrl}/v2/payments/captures/${encodeURIComponent(order.paypalCaptureId)}/refund`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "PayPal-Request-Id": `refund-${order.paypalCaptureId}-${Date.now()}`
+      },
+      body: JSON.stringify({
+        note_to_payer: reason || "Style & Class London customer refund"
+      })
+    });
+
+    const refundData = await refundRes.json();
+    if (!refundRes.ok) {
+      console.error("[PayPal Refund Error]:", refundRes.status, refundData);
+      return res.status(refundRes.status).json({
+        success: false,
+        error: refundData.message || refundData.details?.[0]?.description || "PayPal refund execution failed",
+        details: refundData
+      });
+    }
+
+    const refundId = refundData.id;
+    const refundAmount = parseFloat(refundData.amount?.value || String(order.total));
+
+    // State machine transition: PAID -> REFUNDED
+    order.paymentState = 'REFUNDED';
+    order.paymentStatus = 'failed';
+    order.refundId = refundId;
+    order.refundedAt = new Date().toISOString();
+    order.refundAmount = refundAmount;
+
+    if (!order.paymentAuditTrail) order.paymentAuditTrail = [];
+    order.paymentAuditTrail.push({
+      timestamp: new Date().toISOString(),
+      state: 'REFUNDED',
+      source: 'paypal_refund_api',
+      note: `Refund issued via PayPal: ${reason || 'Merchant/Admin initiated'}`,
+      captureId: order.paypalCaptureId,
+      amount: refundAmount,
+      currency: refundData.amount?.currency_code || 'GBP',
+      rawStatus: refundData.status
+    });
+
+    // RESTORE INVENTORY FOR REFUNDED 1-OF-1 PIECES
+    const restoredProductIds: string[] = [];
+    if (order.items && Array.isArray(order.items)) {
+      order.items.forEach(it => {
+        soldProductIds.delete(it.productId);
+        const prod = products.find(p => p.id === it.productId);
+        if (prod) {
+          prod.status = 'active';
+          prod.stock = 1;
+          restoredProductIds.push(prod.id);
+        }
+      });
+      persistSoldProducts();
+      persistProducts();
+      console.info(`[Store Inventory] Restored refunded items to active stock: ${restoredProductIds.join(', ')}`);
+    }
+
+    persistOrders();
+
+    return res.json({
+      success: true,
+      order,
+      refundId,
+      restoredProductIds,
+      message: `Successfully refunded £${refundAmount.toFixed(2)} GBP via PayPal and restored 1-of-1 piece inventory.`
+    });
+  } catch (err: any) {
+    console.error("Refund exception:", err);
+    res.status(500).json({ success: false, error: err.message || "Failed to process refund" });
+  }
+});
+
+// GET PayPal Gateway Health & Connectivity Status
+app.get("/api/paypal/health", async (req, res) => {
+  try {
+    const clientId = (process.env.PAYPAL_CLIENT_ID || settings.paypalClientId || '').trim();
+    const hasSecret = Boolean(process.env.PAYPAL_CLIENT_SECRET || process.env.PAYPAL_SECRET || settings.paypalSecret);
+    const environment = (process.env.PAYPAL_ENVIRONMENT || 'live').toLowerCase();
+    const baseUrl = getPayPalBaseUrl();
+
+    let tokenValid = false;
+    let tokenError: string | null = null;
+    try {
+      const token = await getPayPalAccessToken();
+      tokenValid = Boolean(token && token.length > 10);
+    } catch (tErr: any) {
+      tokenError = tErr.message;
+    }
+
+    const whatsappToken = process.env.WHATSAPP_ACCESS_TOKEN || settings.whatsappAccessToken;
+    const whatsappPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID || settings.whatsappPhoneNumberId;
+    const hasMetaWhatsApp = Boolean(whatsappToken && whatsappPhoneId && !whatsappToken.startsWith('EAA...'));
+
+    res.json({
+      status: tokenValid ? 'healthy' : 'degraded',
+      environment,
+      baseUrl,
+      clientIdConfigured: Boolean(clientId),
+      clientIdMasked: clientId ? `${clientId.slice(0, 8)}...${clientId.slice(-4)}` : null,
+      secretConfigured: hasSecret,
+      tokenValid,
+      tokenError,
+      currency: "GBP",
+      merchantEmail: settings.merchantPayPalEmail || settings.merchantEmail || "styleandclasslondon@gmail.com",
+      storeWhatsApp: getStoreWhatsAppNumber(),
+      whatsappProvider: hasMetaWhatsApp ? 'meta_cloud_api' : (settings.whatsappWebhookUrl ? 'webhook' : 'direct_link_ready'),
+      activeProductsCount: products.filter(p => p.status === 'active' && p.stock > 0).length,
+      soldProductsCount: soldProductIds.size,
+      totalOrders: orders.length,
+      paidOrdersCount: orders.filter(o => o.paymentState === 'PAID').length
+    });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', error: err.message });
   }
 });
 
@@ -1478,29 +1864,178 @@ app.get(["/api/barcode/:orderId", "/api/barcode"], async (req, res) => {
 });
 
 // Webhook listener for asynchronous PayPal events (Idempotent order reconciliation)
-app.post("/api/checkout/webhook", async (req, res) => {
-  const event = req.body || {};
-  const eventType = event.event_type || 'UNKNOWN';
-  console.info(`[PayPal Webhook] Event received: ${eventType}`);
+app.post(["/api/paypal/webhook", "/api/checkout/webhook"], async (req, res) => {
+  try {
+    const event = req.body || {};
+    const eventType = event.event_type || 'UNKNOWN';
+    console.info(`[PayPal Webhook] Event received: ${eventType} (ID: ${event.id || 'N/A'})`);
 
-  if (eventType === "PAYMENT.CAPTURE.COMPLETED") {
     const resource = event.resource || {};
     const captureId = resource.id;
-    const amountVal = parseFloat(resource.amount?.value || "0");
-    const currency = resource.amount?.currency_code;
+    const relatedOrderId = resource.supplementary_data?.related_ids?.order_id;
 
-    // Find corresponding order if not yet finalized
-    const targetOrder = orders.find(o => o.paypalCaptureId === captureId || o.paypalOrderId === resource.supplementary_data?.related_ids?.order_id);
-    if (targetOrder && targetOrder.paymentStatus !== 'completed') {
-      targetOrder.paymentStatus = 'completed';
-      targetOrder.paymentState = 'PAID';
-      targetOrder.paypalCaptureId = captureId;
-      persistOrders();
-      console.info(`[PayPal Webhook] Order ${targetOrder.id} marked PAID from webhook capture ${captureId}`);
+    if (eventType === "PAYMENT.CAPTURE.COMPLETED") {
+      const amountVal = parseFloat(resource.amount?.value || "0");
+      const currency = resource.amount?.currency_code || "GBP";
+
+      const targetOrder = orders.find(o => 
+        (captureId && o.paypalCaptureId === captureId) || 
+        (relatedOrderId && o.paypalOrderId === relatedOrderId)
+      );
+
+      if (targetOrder && targetOrder.paymentState !== 'PAID') {
+        targetOrder.paymentStatus = 'completed';
+        targetOrder.paymentState = 'PAID';
+        if (captureId) targetOrder.paypalCaptureId = captureId;
+
+        if (!targetOrder.paymentAuditTrail) targetOrder.paymentAuditTrail = [];
+        targetOrder.paymentAuditTrail.push({
+          timestamp: new Date().toISOString(),
+          state: 'PAID',
+          source: 'paypal_webhook',
+          note: `Webhook verified capture: ${eventType}`,
+          captureId,
+          amount: amountVal,
+          currency,
+          rawStatus: resource.status
+        });
+
+        // Reduce inventory atomically
+        if (targetOrder.items && Array.isArray(targetOrder.items)) {
+          targetOrder.items.forEach(it => {
+            soldProductIds.add(it.productId);
+            const prod = products.find(p => p.id === it.productId);
+            if (prod) {
+              prod.status = 'sold';
+              prod.stock = 0;
+            }
+          });
+          persistSoldProducts();
+          persistProducts();
+        }
+
+        // Send WhatsApp alert if not yet sent
+        if (!targetOrder.whatsappNotified) {
+          try {
+            const firstItem = targetOrder.items?.[0] || {};
+            const itemTitleSummary = targetOrder.items?.map(i => `${i.productTitle} [${i.code || '1-of-1'}]`).join(', ') || 'Style & Class Piece';
+            const photoUrl = firstItem.image || 'https://styleandclass.store/logo.png';
+
+            const waResult = await sendOrderAlertToWhatsApp(
+              {
+                orderId: targetOrder.id,
+                itemName: itemTitleSummary,
+                itemPrice: targetOrder.total,
+                itemCurrency: targetOrder.currency || 'GBP',
+                itemPhotoUrl: photoUrl,
+                buyerName: targetOrder.customer.fullName,
+                buyerPhone: targetOrder.customer.phone || 'N/A',
+                buyerAddress: `${targetOrder.customer.address}, ${targetOrder.customer.city}, ${targetOrder.customer.postcode}`,
+                paymentMethod: targetOrder.paymentMethod === 'card_uk' ? 'Debit/Credit Card (PayPal UK)' : 'PayPal UK (Verified)',
+                shippingCompany: targetOrder.carrierName || 'Evri Standard Delivery',
+                paypalCaptureId: targetOrder.paypalCaptureId || captureId,
+                barcodeUrl: targetOrder.barcodeUrl,
+                barcodeBase64OrUrl: targetOrder.addressBarcode,
+                items: targetOrder.items.map(it => ({
+                  title: it.productTitle,
+                  code: it.code,
+                  price: it.price,
+                  quantity: it.quantity,
+                  photoUrl: it.image,
+                  size: it.size
+                })),
+                subtotal: targetOrder.subtotal,
+                shippingCost: targetOrder.shipping,
+                total: targetOrder.total
+              },
+              settings
+            );
+
+            if (waResult.providerSent) {
+              targetOrder.whatsappNotified = true;
+              targetOrder.whatsappStatus = 'sent';
+            } else {
+              targetOrder.whatsappStatus = 'pending';
+            }
+            targetOrder.whatsappUrl = waResult.directWhatsAppUrl;
+            targetOrder.whatsappReportText = waResult.reportText;
+          } catch (waErr: any) {
+            console.warn("[PayPal Webhook] WhatsApp dispatch warning:", waErr?.message);
+          }
+        }
+
+        persistOrders();
+        console.info(`[PayPal Webhook] Order ${targetOrder.id} marked PAID and stock archived from webhook capture ${captureId}`);
+      }
+    } else if (eventType === "PAYMENT.CAPTURE.REFUNDED") {
+      const targetOrder = orders.find(o => 
+        (captureId && o.paypalCaptureId === captureId) || 
+        (resource.id && o.refundId === resource.id)
+      );
+
+      if (targetOrder && targetOrder.paymentState !== 'REFUNDED') {
+        targetOrder.paymentState = 'REFUNDED';
+        targetOrder.paymentStatus = 'failed';
+        targetOrder.refundedAt = new Date().toISOString();
+
+        if (!targetOrder.paymentAuditTrail) targetOrder.paymentAuditTrail = [];
+        targetOrder.paymentAuditTrail.push({
+          timestamp: new Date().toISOString(),
+          state: 'REFUNDED',
+          source: 'paypal_webhook',
+          note: `Webhook verified refund event: ${eventType}`,
+          captureId: targetOrder.paypalCaptureId,
+          amount: parseFloat(resource.amount?.value || String(targetOrder.total)),
+          currency: resource.amount?.currency_code || 'GBP',
+          rawStatus: resource.status
+        });
+
+        // Restore inventory
+        if (targetOrder.items && Array.isArray(targetOrder.items)) {
+          targetOrder.items.forEach(it => {
+            soldProductIds.delete(it.productId);
+            const prod = products.find(p => p.id === it.productId);
+            if (prod) {
+              prod.status = 'active';
+              prod.stock = 1;
+            }
+          });
+          persistSoldProducts();
+          persistProducts();
+        }
+
+        persistOrders();
+        console.info(`[PayPal Webhook] Order ${targetOrder.id} transitioned to REFUNDED and stock restored.`);
+      }
+    } else if (eventType === "PAYMENT.CAPTURE.DENIED" || eventType === "PAYMENT.CAPTURE.DECLINED") {
+      const targetOrder = orders.find(o => 
+        (captureId && o.paypalCaptureId === captureId) || 
+        (relatedOrderId && o.paypalOrderId === relatedOrderId)
+      );
+
+      if (targetOrder && targetOrder.paymentState !== 'PAID') {
+        targetOrder.paymentState = 'FAILED';
+        targetOrder.paymentStatus = 'failed';
+
+        if (!targetOrder.paymentAuditTrail) targetOrder.paymentAuditTrail = [];
+        targetOrder.paymentAuditTrail.push({
+          timestamp: new Date().toISOString(),
+          state: 'FAILED',
+          source: 'paypal_webhook',
+          note: `Payment capture denied by provider: ${eventType}`,
+          rawStatus: resource.status
+        });
+
+        persistOrders();
+        console.info(`[PayPal Webhook] Order ${targetOrder.id} marked FAILED.`);
+      }
     }
-  }
 
-  res.json({ received: true });
+    res.json({ received: true });
+  } catch (err: any) {
+    console.error("[PayPal Webhook Error]:", err);
+    res.status(500).json({ received: false, error: err.message });
+  }
 });
 
 // Catch-all 404 handler for API routes to never return HTML to API consumers

@@ -9,14 +9,14 @@
     "condition": "Excellent",
     "collection": "women",
     "category": "Maxi Dress",
-    "price": 4.98,
+    "price": 28,
     "compareAtPrice": 89,
     "currency": "GBP",
     "currencySymbol": "£",
     "rating": 5,
     "reviewCount": 16,
-    "stock": 0,
-    "status": "sold",
+    "stock": 1,
+    "status": "active",
     "featured": true,
     "material": "Satin Finish Crepe Viscose",
     "sizes": [
@@ -25,7 +25,8 @@
     "colors": [
       {
         "name": "Vintage Botanical",
-        "hex": "#c59b27"
+        "hex": "#4b5563",
+        "imageIndex": 0
       }
     ],
     "tags": [
@@ -65,14 +66,14 @@
     "condition": "New Without Tags",
     "collection": "women",
     "category": "Knitwear",
-    "price": 5,
+    "price": 32,
     "compareAtPrice": 95,
     "currency": "GBP",
     "currencySymbol": "£",
     "rating": 4.9,
     "reviewCount": 12,
-    "stock": 0,
-    "status": "sold",
+    "stock": 1,
+    "status": "active",
     "featured": false,
     "material": "70% Wool, 30% Cashmere",
     "sizes": [
@@ -81,7 +82,8 @@
     "colors": [
       {
         "name": "Oatmeal Melange",
-        "hex": "#c59b27"
+        "hex": "#d8cca3",
+        "imageIndex": 0
       }
     ],
     "tags": [
@@ -120,14 +122,14 @@
     "condition": "Excellent",
     "collection": "men",
     "category": "Outerwear",
-    "price": 5,
+    "price": 68,
     "compareAtPrice": 95,
     "currency": "GBP",
     "currencySymbol": "£",
     "rating": 4.9,
     "reviewCount": 11,
-    "stock": 0,
-    "status": "sold",
+    "stock": 1,
+    "status": "active",
     "featured": true,
     "material": "Water-resistant Cotton Gabardine",
     "sizes": [
@@ -136,7 +138,8 @@
     "colors": [
       {
         "name": "Classic Khaki Honey",
-        "hex": "#c59b27"
+        "hex": "#c2a67e",
+        "imageIndex": 0
       }
     ],
     "tags": [
@@ -181,8 +184,8 @@
     "currencySymbol": "£",
     "rating": 4.9,
     "reviewCount": 14,
-    "stock": 0,
-    "status": "sold",
+    "stock": 1,
+    "status": "active",
     "featured": false,
     "material": "100% Heavyweight Oxford Cotton",
     "sizes": [
@@ -231,14 +234,14 @@
     "condition": "Excellent",
     "collection": "men",
     "category": "Knitwear",
-    "price": 5,
+    "price": 38,
     "compareAtPrice": 110,
     "currency": "GBP",
     "currencySymbol": "£",
     "rating": 5,
     "reviewCount": 8,
-    "stock": 0,
-    "status": "sold",
+    "stock": 1,
+    "status": "active",
     "featured": false,
     "material": "100% Pure British Lambswool",
     "sizes": [
@@ -247,7 +250,8 @@
     "colors": [
       {
         "name": "Forest Olive Heather",
-        "hex": "#c59b27"
+        "hex": "#3f4f3f",
+        "imageIndex": 0
       }
     ],
     "tags": [
@@ -286,7 +290,7 @@
     "condition": "Very Good",
     "collection": "men",
     "category": "Trousers",
-    "price": 5,
+    "price": 32,
     "compareAtPrice": 120,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -302,7 +306,8 @@
     "colors": [
       {
         "name": "Charcoal Heather",
-        "hex": "#c59b27"
+        "hex": "#334155",
+        "imageIndex": 0
       }
     ],
     "tags": [
@@ -341,7 +346,7 @@
     "condition": "Excellent",
     "collection": "men",
     "category": "Jackets",
-    "price": 4.99,
+    "price": 85,
     "compareAtPrice": 295,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -357,7 +362,8 @@
     "colors": [
       {
         "name": "Antique Brown Wax",
-        "hex": "#c59b27"
+        "hex": "#4a3525",
+        "imageIndex": 0
       }
     ],
     "tags": [
@@ -402,8 +408,8 @@
     "currencySymbol": "£",
     "rating": 5,
     "reviewCount": 7,
-    "stock": 0,
-    "status": "sold",
+    "stock": 1,
+    "status": "active",
     "featured": true,
     "material": "100% Organic Soft Denim",
     "sizes": [
@@ -452,7 +458,7 @@
     "condition": "Excellent",
     "collection": "kids",
     "category": "Outerwear",
-    "price": 5,
+    "price": 24,
     "compareAtPrice": 70,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -468,7 +474,8 @@
     "colors": [
       {
         "name": "Classic Navy",
-        "hex": "#c59b27"
+        "hex": "#1e3a8a",
+        "imageIndex": 0
       }
     ],
     "tags": [
@@ -507,7 +514,7 @@
     "condition": "New Without Tags",
     "collection": "kids",
     "category": "Tops",
-    "price": 5,
+    "price": 9.5,
     "compareAtPrice": 25,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -523,7 +530,8 @@
     "colors": [
       {
         "name": "Navy & White Stripe",
-        "hex": "#f3f4f6"
+        "hex": "#1e293b",
+        "imageIndex": 0
       }
     ],
     "tags": [
@@ -562,7 +570,7 @@
     "condition": "Excellent",
     "collection": "kids",
     "category": "Dresses",
-    "price": 5,
+    "price": 16,
     "compareAtPrice": 42,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -578,7 +586,8 @@
     "colors": [
       {
         "name": "Rose Garden Print",
-        "hex": "#c59b27"
+        "hex": "#f472b6",
+        "imageIndex": 0
       }
     ],
     "tags": [
@@ -617,7 +626,7 @@
     "condition": "New Without Tags",
     "collection": "accessories",
     "category": "HAND BAG",
-    "price": 4.97,
+    "price": 125,
     "compareAtPrice": 135,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -633,7 +642,8 @@
     "colors": [
       {
         "name": "Forest Dark Green",
-        "hex": "#c59b27"
+        "hex": "#164e3f",
+        "imageIndex": 0
       }
     ],
     "tags": [
@@ -684,7 +694,7 @@
     "condition": "Excellent",
     "collection": "accessories",
     "category": "Scarves",
-    "price": 5,
+    "price": 45,
     "compareAtPrice": 180,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -700,7 +710,8 @@
     "colors": [
       {
         "name": "Classic Nova Check",
-        "hex": "#c59b27"
+        "hex": "#d8cca3",
+        "imageIndex": 0
       }
     ],
     "tags": [
@@ -739,7 +750,7 @@
     "condition": "Excellent",
     "collection": "accessories",
     "category": "Crossbody Bags",
-    "price": 4.97,
+    "price": 52,
     "compareAtPrice": 165,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -755,7 +766,8 @@
     "colors": [
       {
         "name": "Classic Black",
-        "hex": "#111111"
+        "hex": "#111827",
+        "imageIndex": 0
       }
     ],
     "tags": [
@@ -793,7 +805,7 @@
     "condition": "Very Good",
     "collection": "accessories",
     "category": "Belts",
-    "price": 5,
+    "price": 36,
     "compareAtPrice": 140,
     "currency": "GBP",
     "currencySymbol": "£",
@@ -809,7 +821,8 @@
     "colors": [
       {
         "name": "Rich Cognac Tan",
-        "hex": "#c59b27"
+        "hex": "#78350f",
+        "imageIndex": 0
       }
     ],
     "tags": [

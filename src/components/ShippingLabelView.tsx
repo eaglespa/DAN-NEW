@@ -99,6 +99,8 @@ export const ShippingLabelView: React.FC<ShippingLabelViewProps> = ({
     currency: 'GBP',
     paymentMethod: 'card_uk',
     paymentStatus: 'completed',
+    paymentState: 'PAID',
+    paypalCaptureId: 'CAP-SAMPLE-671132',
     whatsappNotified: true,
     addressQrUrl:
       'https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=19%20rutland%20road%2C%20london%2C%20UB34AG%2C%20United%20Kingdom',
