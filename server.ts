@@ -97,26 +97,41 @@ const persistReviews = () => {
   }
 };
 
-// Load or initialize data
+// Load or initialize data with automatic synchronization from INITIAL_PRODUCTS
 try {
   if (fs.existsSync(PRODUCTS_FILE)) {
-    products = JSON.parse(fs.readFileSync(PRODUCTS_FILE, "utf-8"));
+    const diskProducts: Product[] = JSON.parse(fs.readFileSync(PRODUCTS_FILE, "utf-8"));
+    const diskProductMap = new Map(diskProducts.map(p => [p.id, p]));
+    const initialMap = new Map(INITIAL_PRODUCTS.map(p => [p.id, p]));
+
+    // Authoritative sync: Any product defined in INITIAL_PRODUCTS gets its code updates
+    // (price, compareAtPrice, title, brand, description, images, etc.) while preserving
+    // runtime inventory flags (status, stock).
+    products = INITIAL_PRODUCTS.map(initProd => {
+      const diskProd = diskProductMap.get(initProd.id);
+      if (!diskProd) return { ...initProd };
+      return {
+        ...initProd,
+        status: diskProd.status ?? initProd.status,
+        stock: diskProd.stock ?? initProd.stock
+      };
+    });
+
+    // Also include any dynamically added products from disk not in INITIAL_PRODUCTS
+    diskProducts.forEach(dp => {
+      if (!initialMap.has(dp.id)) {
+        products.push(dp);
+      }
+    });
   } else {
     products = [...INITIAL_PRODUCTS];
-    fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(products, null, 2));
   }
 } catch (e) {
   console.warn("Failed to load products file, using initial data:", e);
   products = [...INITIAL_PRODUCTS];
 }
 
-// Ensure all initial products are loaded in products array
-const existingInitialIds = new Set(products.map(p => p.id));
-INITIAL_PRODUCTS.forEach(ip => {
-  if (!existingInitialIds.has(ip.id)) {
-    products.push({ ...ip });
-  }
-});
+persistProducts();
 
 try {
   if (fs.existsSync(ORDERS_FILE)) {
