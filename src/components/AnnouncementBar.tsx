@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Flame, ShieldCheck, ChevronDown } from 'lucide-react';
+import { Flame, ShieldCheck } from 'lucide-react';
 import { StoreSettings } from '../types';
 
 interface AnnouncementBarProps {
   settings: StoreSettings;
-  currency: string;
-  onCurrencyChange: (c: string) => void;
+  currency?: string;
+  onCurrencyChange?: (c: string) => void;
 }
 
 export const AnnouncementBar: React.FC<AnnouncementBarProps> = ({
   settings,
-  currency,
+  currency = 'GBP',
   onCurrencyChange
 }) => {
   const [timeLeft, setTimeLeft] = useState({ hours: 4, minutes: 28, seconds: 45 });
@@ -59,18 +59,9 @@ export const AnnouncementBar: React.FC<AnnouncementBarProps> = ({
             <span>Official UK Store</span>
           </div>
 
-          <div className="relative inline-flex items-center bg-slate-900 border border-slate-700/80 rounded-full px-2.5 py-0.5">
+          <div className="inline-flex items-center bg-slate-900 border border-slate-700/80 rounded-full px-2.5 py-0.5 shadow-inner">
             <span className="text-slate-400 text-[10.5px] mr-1.5 font-medium">Currency:</span>
-            <select
-              value={currency}
-              onChange={(e) => onCurrencyChange(e.target.value)}
-              className="bg-transparent text-white text-[11px] font-bold focus:outline-none cursor-pointer pr-3"
-            >
-              <option value="GBP" className="bg-slate-900 text-white">GBP (£)</option>
-              <option value="EUR" className="bg-slate-900 text-white">EUR (€)</option>
-              <option value="USD" className="bg-slate-900 text-white">USD ($)</option>
-            </select>
-            <ChevronDown className="w-2.5 h-2.5 text-slate-400 pointer-events-none absolute right-2" />
+            <span className="text-white text-[11px] font-bold tracking-wide">GBP (£)</span>
           </div>
         </div>
       </div>
